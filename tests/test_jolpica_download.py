@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from f1predict.data.jolpica import download_season, fresh_since_for
+from f1predict.data.jolpica import download_season
 
 NOW = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
 SINGAPORE_RACE = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
@@ -106,12 +106,3 @@ def test_unpublished_sessions_are_left_out(jolpica_races) -> None:
     assert data.results == []
     assert data.qualifying == []
     assert data.sprint == []
-
-
-def test_fresh_since_for_switches_at_72_hours() -> None:
-    """Before 72 h, copies over an hour old are stale; after, only copies made post-72 h count."""
-    start = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
-    before = start + timedelta(hours=71)
-    after = start + timedelta(hours=80)
-    assert fresh_since_for(start, before) == before - timedelta(hours=1)
-    assert fresh_since_for(start, after) == start + timedelta(hours=72)

@@ -16,7 +16,7 @@ def test_data_folders_are_absolute_and_inside_data_dir() -> None:
     folders = (
         config.RAW_DIR,
         config.JOLPICA_CACHE_DIR,
-        config.FASTF1_CACHE_DIR,
+        config.OPENF1_CACHE_DIR,
         config.INTERIM_DIR,
         config.PROCESSED_DIR,
         config.PUBLISHED_DIR,

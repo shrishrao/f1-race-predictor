@@ -17,7 +17,7 @@ from f1predict import __version__, config
 from f1predict.log import setup_logging
 
 if TYPE_CHECKING:
-    from f1predict.data.fetch import SeasonSummary
+    from f1predict.data.fetch import PracticeSummary, SeasonSummary
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -96,25 +96,43 @@ def fetch(
         bool,
         typer.Option("--refresh", help="Ignore cached responses and download everything again."),
     ] = False,
+    practice: Annotated[
+        bool,
+        typer.Option(
+            "--practice/--no-practice",
+            help="Also download practice laps from OpenF1 (available from 2023).",
+        ),
+    ] = True,
 ) -> None:
-    """Download schedules, results, qualifying and sprint results from the Jolpica API."""
+    """Download race data from Jolpica and practice laps from OpenF1.
+
+    Safe to stop and re-run at any time: everything already downloaded is cached.
+    """
     if from_season > to_season:
         raise typer.BadParameter(
             f"{from_season} is later than --to {to_season}.", param_hint="'--from'"
         )
 
-    from f1predict.data.fetch import fetch_jolpica
-    from f1predict.data.jolpica import JolpicaError
+    from f1predict.data.fetch import fetch_jolpica, fetch_practice, practice_seasons
+    from f1predict.data.http import ApiError
+    from f1predict.data.mapping import DriverMappingError
+    from f1predict.data.openf1 import PracticeAlignmentError
     from f1predict.data.tables import DataValidationError
 
     setup_logging(log_file=config.LOG_DIR / "fetch.log")
     try:
-        summaries = fetch_jolpica(from_season, to_season, refresh=refresh)
-    except (JolpicaError, DataValidationError) as exc:
+        _print_fetch_summary(fetch_jolpica(from_season, to_season, refresh=refresh))
+        if practice and practice_seasons(from_season, to_season):
+            _print_practice_summary(fetch_practice(from_season, to_season, refresh=refresh))
+        elif practice:
+            console.print(
+                f"Practice laps come from OpenF1 and start in {config.FIRST_PRACTICE_SEASON}; "
+                "none to download for these seasons."
+            )
+    except (ApiError, DataValidationError, PracticeAlignmentError, DriverMappingError) as exc:
         console.print(f"[bold red]Fetch failed:[/bold red] {exc}")
         console.print("Everything downloaded so far is cached. Run the same command to resume.")
         raise typer.Exit(code=1) from exc
-    _print_fetch_summary(summaries)
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +162,29 @@ def _print_fetch_summary(summaries: list[SeasonSummary]) -> None:
         for warning in summary.warnings:
             console.print(f"[yellow]Warning:[/yellow] {warning}")
     console.print(f"Tables saved under {config.INTERIM_DIR}")
+
+
+def _print_practice_summary(summaries: list[PracticeSummary]) -> None:
+    """Show one row per season: practice sessions, laps, mapped drivers and stand-ins."""
+    table = Table(title="OpenF1 practice download")
+    columns = ("Season", "Sessions", "Laps", "Drivers", "Stand-ins", "Fetched", "Retries", "Cached")
+    for column in columns:
+        table.add_column(column, justify="right")
+    for summary in summaries:
+        table.add_row(
+            str(summary.season),
+            str(summary.sessions),
+            str(summary.laps),
+            str(summary.drivers),
+            str(summary.practice_only),
+            str(summary.downloads),
+            str(summary.retries),
+            str(summary.cache_hits),
+        )
+    console.print(table)
+    for summary in summaries:
+        for warning in summary.warnings:
+            console.print(f"[yellow]Warning:[/yellow] {warning}")
 
 
 # ---------------------------------------------------------------------------

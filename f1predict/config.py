@@ -27,7 +27,7 @@ def _dir_from_env(var: str, default: Path) -> Path:
 DATA_DIR = _dir_from_env("F1PREDICT_DATA_DIR", REPO_ROOT / "data")
 RAW_DIR = DATA_DIR / "raw"
 JOLPICA_CACHE_DIR = RAW_DIR / "jolpica"
-FASTF1_CACHE_DIR = RAW_DIR / "fastf1"
+OPENF1_CACHE_DIR = RAW_DIR / "openf1"
 INTERIM_DIR = DATA_DIR / "interim"
 PROCESSED_DIR = DATA_DIR / "processed"
 PUBLISHED_DIR = DATA_DIR / "published"
@@ -67,6 +67,21 @@ JOLPICA_MAX_CALLS_PER_HOUR = 450
 JOLPICA_TIMEOUT_S = (5.0, 30.0)
 JOLPICA_MAX_ATTEMPTS = 6
 FIRST_SPRINT_SEASON = 2021
+
+# ---------------------------------------------------------------------------
+# OpenF1 API (practice laps)
+# F1's own timing archive needs an F1 TV login since October 2026, so practice laps come
+# from OpenF1, which serves them without one from 2023 on. Its free tier allows 3 requests
+# per second and 30 per minute; the client stays at 28 per minute.
+# ---------------------------------------------------------------------------
+
+OPENF1_BASE_URL = "https://api.openf1.org/v1/"
+OPENF1_MIN_INTERVAL_S = 0.4
+OPENF1_MAX_INTERVAL_S = 8.0
+OPENF1_MAX_CALLS_PER_MINUTE = 28
+OPENF1_TIMEOUT_S = (5.0, 60.0)
+OPENF1_MAX_ATTEMPTS = 6
+FIRST_PRACTICE_SEASON = 2023
 
 # ---------------------------------------------------------------------------
 # Cache freshness

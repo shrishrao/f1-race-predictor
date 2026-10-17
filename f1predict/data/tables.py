@@ -24,7 +24,7 @@ from f1predict.data.status import classify_status
 
 logger = logging.getLogger(__name__)
 
-TABLE_NAMES = ("schedule", "results", "qualifying", "sprint")
+TABLE_NAMES = ("schedule", "results", "qualifying", "sprint", "practice", "practice_only")
 SESSIONS = ("fp1", "fp2", "fp3", "sprint_quali", "sprint", "quali", "race")
 SESSION_KEYS = {
     "FirstPractice": "fp1",
@@ -138,7 +138,7 @@ def _to_int(value: Any) -> int | None:
         return None
 
 
-def _frame(rows: list[dict[str, Any]], dtypes: dict[str, str]) -> pd.DataFrame:
+def typed_frame(rows: list[dict[str, Any]], dtypes: dict[str, str]) -> pd.DataFrame:
     """Build a DataFrame with exactly these columns and types, even when there are no rows."""
     frame = pd.DataFrame(rows, columns=list(dtypes))
     for column, dtype in dtypes.items():
@@ -174,14 +174,14 @@ def schedule_table(races: Iterable[dict[str, Any]]) -> pd.DataFrame:
                 "is_sprint_weekend": starts["sprint"] is not None,
             }
         )
-    return _frame(rows, SCHEDULE_DTYPES)
+    return typed_frame(rows, SCHEDULE_DTYPES)
 
 
 def results_table(races: Iterable[dict[str, Any]], results_key: str = "Results") -> pd.DataFrame:
     """One row per driver per race (or sprint): grid, position, points and finishing status.
 
     ``car_number`` is the number the car actually raced with that weekend, which is what
-    FastF1 uses. Jolpica's ``permanentNumber`` is the driver's current number and is wrong
+    OpenF1 uses. Jolpica's ``permanentNumber`` is the driver's current number and is wrong
     for past seasons (Verstappen raced #33 and #1, but it says 3), so it is not kept.
     """
     rows = []
@@ -211,7 +211,7 @@ def results_table(races: Iterable[dict[str, Any]], results_key: str = "Results")
                     "time_ms": _to_int((entry.get("Time") or {}).get("millis")),
                 }
             )
-    return _frame(rows, RESULT_DTYPES)
+    return typed_frame(rows, RESULT_DTYPES)
 
 
 def qualifying_table(races: Iterable[dict[str, Any]]) -> pd.DataFrame:
@@ -234,7 +234,7 @@ def qualifying_table(races: Iterable[dict[str, Any]]) -> pd.DataFrame:
                     "q3_s": parse_lap_time(entry.get("Q3")),
                 }
             )
-    return _frame(rows, QUALIFYING_DTYPES)
+    return typed_frame(rows, QUALIFYING_DTYPES)
 
 
 def build_tables(

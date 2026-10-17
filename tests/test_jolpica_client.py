@@ -1,7 +1,7 @@
-"""Tests for the Jolpica client: rate limiting, retries, pagination and caching.
+"""Tests for the Jolpica client: retries, pagination, caching and error handling.
 
-HTTP is faked with the ``responses`` library, and time with a fake clock, so these tests
-never touch the network and never really wait.
+HTTP is faked with the ``responses`` library, so these tests never touch the network. The
+rate limiter itself is tested in ``test_http.py``.
 """
 
 from __future__ import annotations
@@ -15,14 +15,8 @@ import responses
 from responses import matchers
 
 from f1predict.data.cache import JsonCache
-from f1predict.data.jolpica import (
-    FetchStats,
-    JolpicaClient,
-    JolpicaError,
-    JolpicaHTTPError,
-    RateLimiter,
-    merge_pages,
-)
+from f1predict.data.http import FetchStats, RateLimiter
+from f1predict.data.jolpica import JolpicaClient, JolpicaError, JolpicaHTTPError, merge_pages
 
 BASE = "https://api.jolpi.ca/ergast/f1/"
 T0 = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
@@ -30,23 +24,6 @@ T0 = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-class FakeClock:
-    """A clock that only moves when the code under test sleeps (or the test moves it)."""
-
-    def __init__(self) -> None:
-        self.now = 0.0
-        self.sleeps: list[float] = []
-
-    def time(self) -> float:
-        """Return the current fake time in seconds."""
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        """Record the sleep and jump the clock forward instead of waiting."""
-        self.sleeps.append(seconds)
-        self.now += seconds
 
 
 def page(races: list[dict[str, Any]], *, total: int, limit: int, offset: int) -> dict[str, Any]:
@@ -111,99 +88,16 @@ def rsps():
 
 
 # ---------------------------------------------------------------------------
-# Rate limiter
-# ---------------------------------------------------------------------------
-
-
-def test_back_to_back_calls_are_spaced_out() -> None:
-    """Three instant calls with a 0.3 s minimum gap wait 0.3 s twice."""
-    clock = FakeClock()
-    limiter = RateLimiter(0.3, 100, 3600.0, clock=clock.time, sleep=clock.sleep)
-    for _ in range(3):
-        limiter.acquire()
-    assert clock.sleeps == pytest.approx([0.3, 0.3])
-
-
-def test_no_wait_when_calls_are_already_far_apart() -> None:
-    """Calls that are naturally a second apart never wait."""
-    clock = FakeClock()
-    limiter = RateLimiter(0.3, 100, 3600.0, clock=clock.time, sleep=clock.sleep)
-    for _ in range(3):
-        limiter.acquire()
-        clock.now += 1.0
-    assert clock.sleeps == []
-
-
-def test_full_window_waits_until_the_oldest_call_expires() -> None:
-    """With 3 calls allowed per 100 s, the 4th and 5th calls wait for slots to free up."""
-    clock = FakeClock()
-    limiter = RateLimiter(0.0, 3, 100.0, clock=clock.time, sleep=clock.sleep)
-    for moment in (0.0, 10.0, 20.0):
-        clock.now = moment
-        limiter.acquire()
-    clock.now = 30.0
-    limiter.acquire()
-    assert clock.sleeps == [70.0]
-    limiter.acquire()
-    assert clock.sleeps == [70.0, 10.0]
-
-
-def test_limiter_needs_a_positive_budget() -> None:
-    """A budget of zero calls is a configuration mistake."""
-    with pytest.raises(ValueError):
-        RateLimiter(0.3, 0, 3600.0)
-
-
-def test_slow_down_doubles_the_gap_up_to_a_cap() -> None:
-    """Each "too many requests" doubles the gap: 0.5 -> 1 -> 2 -> 4 -> 8, then stays at 8."""
-    limiter = RateLimiter(0.5, 100, 3600.0, max_interval=8.0)
-    gaps = []
-    for _ in range(5):
-        limiter.slow_down()
-        gaps.append(limiter.min_interval)
-    assert gaps == [1.0, 2.0, 4.0, 8.0, 8.0]
-
-
-def test_gap_recovers_after_a_run_of_successes_but_not_below_the_start() -> None:
-    """Every 20 successes in a row shrink the gap by a quarter, never below the starting gap."""
-    limiter = RateLimiter(0.5, 100, 3600.0, recover_after=20)
-    limiter.slow_down()
-    limiter.slow_down()
-    for _ in range(19):
-        limiter.record_success()
-    assert limiter.min_interval == 2.0
-    limiter.record_success()
-    assert limiter.min_interval == 1.5
-    for _ in range(200):
-        limiter.record_success()
-    assert limiter.min_interval == 0.5
-
-
-def test_a_zero_gap_limiter_still_backs_off() -> None:
-    """Even with no starting gap, a slow-down waits at least half a second."""
-    limiter = RateLimiter(0.0, 100, 3600.0)
-    limiter.slow_down()
-    assert limiter.min_interval == 0.5
-
-
-# ---------------------------------------------------------------------------
 # Pagination
 # ---------------------------------------------------------------------------
 
 
 def test_pages_follow_the_servers_limit_and_split_races_are_rejoined(tmp_path, rsps) -> None:
     """The server caps pages at 3 rows; round 2 is split across pages and gets stitched back."""
-    add(
-        rsps,
-        "2025/results.json",
-        page([race(1, ["a", "b"]), race(2, ["c"])], total=5, limit=3, offset=0),
-    )
-    add(
-        rsps,
-        "2025/results.json",
-        page([race(2, ["d"]), race(3, ["e"])], total=5, limit=3, offset=3),
-        offset=3,
-    )
+    first = page([race(1, ["a", "b"]), race(2, ["c"])], total=5, limit=3, offset=0)
+    second = page([race(2, ["d"]), race(3, ["e"])], total=5, limit=3, offset=3)
+    add(rsps, "2025/results.json", first)
+    add(rsps, "2025/results.json", second, offset=3)
     races = make_client(tmp_path).get_races("2025/results.json", results_key="Results")
     assert driver_ids(races) == [("1", ["a", "b"]), ("2", ["c", "d"]), ("3", ["e"])]
     assert len(rsps.calls) == 2
@@ -273,13 +167,8 @@ def test_cached_copy_older_than_fresh_since_is_downloaded_again(tmp_path, rsps) 
 def test_refresh_ignores_the_cache(tmp_path, rsps) -> None:
     """``--refresh`` downloads again even when a cached copy exists."""
     cache = JsonCache(tmp_path / "cache")
-    cache.save(
-        "2025.json",
-        {"limit": 100, "offset": 0},
-        url="u",
-        payload=page([], total=1, limit=100, offset=0),
-        fetched_at=T0,
-    )
+    cached = page([], total=1, limit=100, offset=0)
+    cache.save("2025.json", {"limit": 100, "offset": 0}, url="u", payload=cached, fetched_at=T0)
     add(rsps, "2025.json", page([race(1, [])], total=1, limit=100, offset=0))
     make_client(tmp_path, refresh=True).get_races("2025.json")
     assert len(rsps.calls) == 1
@@ -291,7 +180,7 @@ def test_refresh_ignores_the_cache(tmp_path, rsps) -> None:
 
 
 def test_rate_limited_request_waits_for_retry_after_then_succeeds(tmp_path, rsps) -> None:
-    """HTTP 429 with Retry-After: 7 waits at least 7 s, then the retry succeeds."""
+    """HTTP 429 with Retry-After: 7 waits at least 7 s, slows the limiter, then succeeds."""
     add(rsps, "2025.json", {"detail": "throttled"}, status=429, headers={"Retry-After": "7"})
     add(rsps, "2025.json", page([race(1, [])], total=1, limit=100, offset=0))
     sleeps: list[float] = []

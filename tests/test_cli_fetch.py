@@ -60,7 +60,22 @@ def test_fetch_downloads_once_then_uses_the_cache(isolated_dirs, jolpica_fixture
     results = pd.read_parquet(isolated_dirs / "interim" / "results" / "2018.parquet")
     assert len(results) == 20
     assert "Jolpica download" in second.output
+    assert "start in 2023" in second.output
     assert (isolated_dirs / "logs" / "fetch.log").exists()
+
+
+def test_no_practice_flag_skips_the_practice_step(isolated_dirs, jolpica_fixture) -> None:
+    """``--no-practice`` downloads race data only and says nothing about practice."""
+    with responses.RequestsMock() as rsps:
+        for path, name in (
+            ("2018.json", "schedule_2018.json"),
+            ("2018/results.json", "results_2018_1.json"),
+            ("2018/qualifying.json", "qualifying_2018_1.json"),
+        ):
+            rsps.add(responses.GET, BASE + path, json=jolpica_fixture(name), match=FIRST_PAGE)
+        result = runner.invoke(app, ["fetch", "--from", "2018", "--to", "2018", "--no-practice"])
+    assert result.exit_code == 0, result.output
+    assert "OpenF1" not in result.output
 
 
 def test_fetch_failure_exits_with_code_1_and_explains(isolated_dirs) -> None:

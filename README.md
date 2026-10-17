@@ -11,8 +11,8 @@ chance to **win**, finish on the **podium**, score **points** (top 10), and **re
 ## How it works
 
 1. **Data**: race results, qualifying, sprints and schedules from the
-   [Jolpica F1 API](https://github.com/jolpica/jolpica-f1); practice laps from
-   [FastF1](https://github.com/theOehrly/Fast-F1). Seasons 2018 to 2026.
+   [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) for 2018 to 2026; practice laps from
+   [OpenF1](https://openf1.org) for 2023 to 2026 (earlier seasons have no practice features).
 2. **Features**: leakage-safe, form-based features only (grid, qualifying gaps, recent form,
    practice pace). No team or driver identity features, because the 2026 regulation reset broke
    many of the old patterns.
@@ -55,7 +55,10 @@ docs/             plots used in this README
   [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial use).
   Files in this repo derived from that data (test fixtures and published artifacts) carry the
   same license.
-- Practice timing data is loaded with FastF1 from Formula 1's live timing service.
+- Practice laps come from the OpenF1 API, also under
+  [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) (non-commercial use).
+  OpenF1 is used because Formula 1's own timing archive started requiring an F1 TV login in
+  October 2026.
 - This is an unofficial project and is not associated in any way with the Formula 1 companies.
   F1, FORMULA ONE, FORMULA 1, FIA FORMULA ONE WORLD CHAMPIONSHIP, GRAND PRIX and related marks
   are trademarks of Formula One Licensing B.V.

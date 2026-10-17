@@ -17,7 +17,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "fastf1>=3.8.3,<3.9",
     "lightgbm>=4.7,<5",
     "matplotlib>=3.10,<4",
     "numpy>=2.3,<3",

@@ -1,1 +1,1 @@
-"""Data access: the Jolpica API client, FastF1 practice data, and driver mapping."""
+"""Data access: Jolpica race data, OpenF1 practice laps, and driver mapping."""

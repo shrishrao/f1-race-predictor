@@ -47,6 +47,17 @@ def jolpica_races(jolpica_fixture) -> Callable[[str], list[dict[str, Any]]]:
     return load
 
 
+@pytest.fixture
+def openf1_fixture() -> Callable[[str], Any]:
+    """Load one saved OpenF1 response by file name (a fresh copy on every call)."""
+
+    def load(name: str) -> Any:
+        """Read ``tests/fixtures/openf1/<name>`` as JSON."""
+        return json.loads((FIXTURES_DIR / "openf1" / name).read_text(encoding="utf-8"))
+
+    return load
+
+
 @pytest.fixture(autouse=True)
 def close_log_handlers() -> Iterator[None]:
     """After each test, remove and close handlers added by setup_logging.

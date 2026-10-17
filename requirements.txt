@@ -1,6 +1,5 @@
 # Exact versions of the runtime dependencies this project is tested with.
 # For development, install everything at once with:  pip install -r requirements-dev.txt
-fastf1==3.8.3
 lightgbm==4.7.0
 matplotlib==3.11.2
 numpy==2.5.3
