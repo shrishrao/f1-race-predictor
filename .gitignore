@@ -1,0 +1,35 @@
+# Python bytecode and build output
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environment
+.venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local settings (none are needed, but they must never be committed)
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Editors and OS files
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Logs
+*.log
+
+# Data: raw caches (including the FastF1 cache) and intermediate files stay local.
+# Only the small artifacts the deployed app reads are committed.
+data/*
+!data/published/

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "f1predict"
+dynamic = ["version"]
+description = "Post-qualifying F1 race outcome predictor: finishing order plus win, podium, points and DNF probabilities."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Shrish Rao" }]
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "fastf1>=3.8.3,<3.9",
+    "lightgbm>=4.7,<5",
+    "matplotlib>=3.10,<4",
+    "numpy>=2.3,<3",
+    "pandas>=2.3,<3",
+    "pyarrow>=21",
+    "pydantic>=2.11,<3",
+    "requests>=2.32,<3",
+    "rich>=14",
+    "scikit-learn>=1.7",
+    "scipy>=1.15,<2",
+    "tenacity>=9,<10",
+    "typer>=0.16",
+]
+
+[project.optional-dependencies]
+app = ["plotly>=6", "streamlit>=1.45"]
+
+[project.scripts]
+f1predict = "f1predict.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "f1predict.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["f1predict*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "D1"]
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["f1predict"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--disable-socket -ra"
