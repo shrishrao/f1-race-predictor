@@ -52,7 +52,30 @@ DEFAULT_SEED = 42
 DEFAULT_SIMS = 100_000
 
 # ---------------------------------------------------------------------------
-# Data sources
+# Jolpica API
+# The docs allow bursts of 4 requests/second and 500 requests/hour, and `limit` is capped
+# at 100 rows per request. In practice Jolpica throttles sooner (HTTP 429 after roughly
+# 70 quick requests), so the client starts at one request per 0.5 s and doubles the gap
+# after every 429, up to 8 s.
 # ---------------------------------------------------------------------------
 
 JOLPICA_BASE_URL = "https://api.jolpi.ca/ergast/f1/"
+JOLPICA_PAGE_LIMIT = 100
+JOLPICA_MIN_INTERVAL_S = 0.5
+JOLPICA_MAX_INTERVAL_S = 8.0
+JOLPICA_MAX_CALLS_PER_HOUR = 450
+JOLPICA_TIMEOUT_S = (5.0, 30.0)
+JOLPICA_MAX_ATTEMPTS = 6
+FIRST_SPRINT_SEASON = 2021
+
+# ---------------------------------------------------------------------------
+# Cache freshness
+# Results can change for hours after a session (penalties, disqualifications), so a
+# copy only counts as final once it was downloaded 72 hours after the session started.
+# Until then it is re-checked at most once an hour. The current season's calendar is
+# re-checked daily; finished seasons are never downloaded twice.
+# ---------------------------------------------------------------------------
+
+RESULTS_SETTLE_HOURS = 72
+RECENT_REFRESH_HOURS = 1
+SCHEDULE_REFRESH_HOURS = 24

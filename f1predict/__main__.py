@@ -1,15 +1,23 @@
-"""Command-line interface: ``python -m f1predict <command>``."""
+"""Command-line interface: ``python -m f1predict <command>``.
+
+Heavy libraries (pandas, requests, ...) are imported inside the commands that need them,
+so ``--help`` and ``info`` start instantly.
+"""
 
 from __future__ import annotations
 
 import platform
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from f1predict import __version__, config
+from f1predict.log import setup_logging
+
+if TYPE_CHECKING:
+    from f1predict.data.fetch import SeasonSummary
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -62,6 +70,80 @@ def info() -> None:
     table.add_row("Data directory", str(config.DATA_DIR))
     table.add_row("Models directory", str(config.MODELS_DIR))
     console.print(table)
+
+
+@app.command()
+def fetch(
+    from_season: Annotated[
+        int,
+        typer.Option(
+            "--from",
+            min=config.FIRST_SEASON,
+            max=config.LAST_SEASON,
+            help="First season to download.",
+        ),
+    ] = config.FIRST_SEASON,
+    to_season: Annotated[
+        int,
+        typer.Option(
+            "--to",
+            min=config.FIRST_SEASON,
+            max=config.LAST_SEASON,
+            help="Last season to download.",
+        ),
+    ] = config.LAST_SEASON,
+    refresh: Annotated[
+        bool,
+        typer.Option("--refresh", help="Ignore cached responses and download everything again."),
+    ] = False,
+) -> None:
+    """Download schedules, results, qualifying and sprint results from the Jolpica API."""
+    if from_season > to_season:
+        raise typer.BadParameter(
+            f"{from_season} is later than --to {to_season}.", param_hint="'--from'"
+        )
+
+    from f1predict.data.fetch import fetch_jolpica
+    from f1predict.data.jolpica import JolpicaError
+    from f1predict.data.tables import DataValidationError
+
+    setup_logging(log_file=config.LOG_DIR / "fetch.log")
+    try:
+        summaries = fetch_jolpica(from_season, to_season, refresh=refresh)
+    except (JolpicaError, DataValidationError) as exc:
+        console.print(f"[bold red]Fetch failed:[/bold red] {exc}")
+        console.print("Everything downloaded so far is cached. Run the same command to resume.")
+        raise typer.Exit(code=1) from exc
+    _print_fetch_summary(summaries)
+
+
+# ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+
+
+def _print_fetch_summary(summaries: list[SeasonSummary]) -> None:
+    """Show one row per season: rows saved, plus responses downloaded, retried and cached."""
+    table = Table(title="Jolpica download")
+    columns = ("Season", "Races", "Results", "Quali", "Sprint", "Fetched", "Retries", "Cached")
+    for column in columns:
+        table.add_column(column, justify="right")
+    for summary in summaries:
+        table.add_row(
+            str(summary.season),
+            str(summary.races),
+            str(summary.results),
+            str(summary.qualifying),
+            str(summary.sprint),
+            str(summary.downloads),
+            str(summary.retries),
+            str(summary.cache_hits),
+        )
+    console.print(table)
+    for summary in summaries:
+        for warning in summary.warnings:
+            console.print(f"[yellow]Warning:[/yellow] {warning}")
+    console.print(f"Tables saved under {config.INTERIM_DIR}")
 
 
 # ---------------------------------------------------------------------------

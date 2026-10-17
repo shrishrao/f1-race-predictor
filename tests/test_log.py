@@ -1,23 +1,10 @@
-"""Tests for the shared logging setup."""
+"""Tests for the shared logging setup (handlers are cleaned up by conftest)."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterator
-
-import pytest
 
 from f1predict.log import LOGGER_NAME, setup_logging
-
-
-@pytest.fixture(autouse=True)
-def clean_logger() -> Iterator[None]:
-    """Remove and close the handlers a test added, so log files are released on Windows."""
-    yield
-    logger = logging.getLogger(LOGGER_NAME)
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
 
 
 def test_messages_reach_the_log_file(tmp_path) -> None:
