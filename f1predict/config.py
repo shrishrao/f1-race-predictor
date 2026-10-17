@@ -44,6 +44,11 @@ LAST_SEASON = 2026
 VALIDATION_SEASON = 2024
 TEST_SEASONS = (2025, 2026)
 
+# Races left out of training, evaluation and rolling form, with the reason.
+EXCLUDED_RACES = {
+    (2021, 12): "Belgian GP: one lap behind the safety car, so the result is the grid",
+}
+
 # ---------------------------------------------------------------------------
 # Simulation defaults
 # ---------------------------------------------------------------------------

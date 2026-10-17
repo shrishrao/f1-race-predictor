@@ -135,6 +135,39 @@ def fetch(
         raise typer.Exit(code=1) from exc
 
 
+@app.command("build-features")
+def build_features_command() -> None:
+    """Build the features table from downloaded data (one row per driver per race)."""
+    from f1predict.data.lineage import UnknownConstructorError
+    from f1predict.features.build import build_features, load_race_tables, save_features
+
+    setup_logging(log_file=config.LOG_DIR / "build_features.log")
+    try:
+        features = build_features(load_race_tables())
+    except FileNotFoundError as exc:
+        console.print(f"[bold red]No data yet:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    except UnknownConstructorError as exc:
+        console.print(f"[bold red]Build failed:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    path = save_features(features)
+
+    table = Table(title="Features")
+    for column in ("Season", "Races", "Rows", "Quali gap", "Practice", "Long run"):
+        table.add_column(column, justify="right")
+    for season, rows in features.groupby("season"):
+        table.add_row(
+            str(season),
+            str(rows["round"].nunique()),
+            str(len(rows)),
+            f"{rows['quali_gap_pole_pct'].notna().mean():.0%}",
+            f"{rows['fp_best_gap_pct'].notna().mean():.0%}",
+            f"{rows['longrun_best_gap_pct'].notna().mean():.0%}",
+        )
+    console.print(table)
+    console.print(f"Saved {len(features)} rows to {path}")
+
+
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
