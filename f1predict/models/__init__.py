@@ -54,10 +54,12 @@ def run_name(name: str, feature_set: str = "full") -> str:
     return name if name == "baseline" else f"{name}_{feature_set}"
 
 
-def make_model(name: str, feature_set: str = "full") -> RaceModel:
+def make_model(name: str, feature_set: str = "full", temperature: float | None = None) -> RaceModel:
     """A new, untrained model by its command-line name (imports only that model's code).
 
     ``feature_set`` picks the ranker's input columns; the grid baseline only uses the grid.
+    With a ``temperature``, the ranker's scores are also turned into win, podium and points
+    chances by simulating each race; without one, the ranker only gives an order.
     """
     if name == "baseline":
         from f1predict.models.baseline import GridBaseline
@@ -66,5 +68,10 @@ def make_model(name: str, feature_set: str = "full") -> RaceModel:
     if name == "ranker":
         from f1predict.models.ranker import RankerModel
 
-        return RankerModel(feature_set=feature_set)
+        ranker = RankerModel(feature_set=feature_set)
+        if temperature is None:
+            return ranker
+        from f1predict.models.simulate import SimulationModel
+
+        return SimulationModel(ranker, temperature)
     raise ValueError(f"Unknown model {name!r}; expected one of {MODEL_NAMES}")

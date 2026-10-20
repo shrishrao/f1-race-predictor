@@ -1,9 +1,10 @@
 """Save and load trained rankers: LightGBM's own text format plus a JSON description.
 
 The ``.txt`` file holds the trees. The ``.json`` file next to it records how the model was
-built: feature set and feature names, settings, the races it learned from, and library
-versions. Loading checks that the two agree. Nothing here uses pickle, which can run any
-code hidden in a file when it's loaded; these files are only ever read as data.
+built: feature set and feature names, settings, the races it learned from, the simulation
+temperature, and library versions. Loading checks that the two agree. Nothing here uses
+pickle, which can run any code hidden in a file when it's loaded; these files are only
+ever read as data.
 """
 
 from __future__ import annotations
@@ -41,9 +42,16 @@ def model_paths(name: str, folder: Path | None = None) -> tuple[Path, Path]:
 
 
 def save_ranker(
-    model: RankerModel, name: str, trained_on: dict[str, Any], folder: Path | None = None
+    model: RankerModel,
+    name: str,
+    trained_on: dict[str, Any],
+    folder: Path | None = None,
+    temperature: float | None = None,
 ) -> Path:
-    """Write a trained ranker and its description; return the tree file's path."""
+    """Write a trained ranker and its description; return the tree file's path.
+
+    ``temperature`` is the simulation temperature to use with this ranker's scores.
+    """
     if model.booster is None:
         raise RuntimeError("Only a trained model can be saved; call fit() first.")
     text_path, meta_path = model_paths(name, folder)
@@ -57,6 +65,7 @@ def save_ranker(
         "features": model.features,
         "settings": model.settings(),
         "trained_on": trained_on,
+        "temperature": temperature,
         "importance": model.importance().to_dict(orient="records"),
     }
     meta_path.write_text(json.dumps(description, indent=2) + "\n", encoding="utf-8")

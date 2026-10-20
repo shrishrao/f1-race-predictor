@@ -233,10 +233,11 @@ def backtest_command(
         raise typer.Exit(code=1)
 
     name = run_name(model, feature_set)
+    temperature = _validation_temperature(features, feature_set) if model == "ranker" else None
     try:
         with _race_progress(total, name) as progress:
             predictions = predict_races(
-                partial(make_model, model, feature_set), features, chosen, progress
+                partial(make_model, model, feature_set, temperature), features, chosen, progress
             )
         result = score_predictions(predictions)
         if model != "baseline":
@@ -301,7 +302,7 @@ def tune(feature_set: FeatureSetOption = "full") -> None:
 
 @app.command()
 def train(feature_set: FeatureSetOption = "full") -> None:
-    """Train the ranker on every completed race and save it under models/."""
+    """Train the ranker on every completed race and save it, with its temperature, in models/."""
     from f1predict.models import run_name
     from f1predict.models.ranker import RankerModel, training_rows
     from f1predict.models.store import save_ranker
@@ -314,6 +315,7 @@ def train(feature_set: FeatureSetOption = "full") -> None:
         console.print("[bold red]No completed races to train on.[/bold red]")
         raise typer.Exit(code=1)
 
+    temperature = _validation_temperature(features, feature_set)
     started = time.perf_counter()
     model = RankerModel(feature_set=feature_set).fit(history)
     seconds = time.perf_counter() - started
@@ -324,8 +326,8 @@ def train(feature_set: FeatureSetOption = "full") -> None:
         "first_race": f"{first['season']} round {first['round']}",
         "last_race": f"{last['season']} round {last['round']}",
     }
-    path = save_ranker(model, run_name("ranker", feature_set), trained_on)
-    _print_training(model, trained_on, seconds)
+    path = save_ranker(model, run_name("ranker", feature_set), trained_on, temperature=temperature)
+    _print_training(model, trained_on, seconds, temperature)
     console.print(f"Saved the model to {path} (description: {path.with_suffix('.json').name})")
 
 
@@ -379,6 +381,25 @@ def _print_practice_summary(summaries: list[PracticeSummary]) -> None:
     for summary in summaries:
         for warning in summary.warnings:
             console.print(f"[yellow]Warning:[/yellow] {warning}")
+
+
+def _validation_temperature(features: pd.DataFrame, feature_set: str) -> float:
+    """Fit the simulation temperature on the validation season, with a progress bar."""
+    from f1predict.evaluate.backtest import completed_races
+    from f1predict.evaluate.tuning import validation_temperature
+
+    season = config.VALIDATION_SEASON
+    races = len(completed_races(features, [season]))
+    if not races:
+        console.print(f"[bold red]No completed {season} races to fit a temperature on.[/bold red]")
+        raise typer.Exit(code=1)
+    with _race_progress(races, f"Fitting T on {season}") as progress:
+        temperature = validation_temperature(features, feature_set, season, progress)
+    console.print(
+        f"Temperature T = {temperature:.3f}, fitted on the {races} races of {season}, each "
+        "scored by a ranker trained only on earlier races."
+    )
+    return temperature
 
 
 def _load_features_or_exit() -> pd.DataFrame:
@@ -507,7 +528,9 @@ def _settings_text(settings: dict) -> str:
     return ", ".join(f"{key}={value}" for key, value in settings.items())
 
 
-def _print_training(model: RankerModel, trained_on: dict, seconds: float) -> None:
+def _print_training(
+    model: RankerModel, trained_on: dict, seconds: float, temperature: float
+) -> None:
     """What the final model learned from, and which features its trees leaned on."""
     span = f"{trained_on['first_race']} to {trained_on['last_race']}"
     summary = Table(title="Trained ranker", show_header=False)
@@ -517,6 +540,7 @@ def _print_training(model: RankerModel, trained_on: dict, seconds: float) -> Non
     summary.add_row("Races", f"{trained_on['races']} ({span})")
     summary.add_row("Finishers", str(trained_on["finishers"]))
     summary.add_row("Settings", _settings_text(model.settings()))
+    summary.add_row("Temperature", f"{temperature:.3f} (fitted on {config.VALIDATION_SEASON})")
     summary.add_row("Training time", f"{seconds:.1f} s")
     console.print(summary)
 
