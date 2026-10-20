@@ -50,6 +50,14 @@ EXCLUDED_RACES = {
 }
 
 # ---------------------------------------------------------------------------
+# Outcomes
+# Every model gives each driver a chance of finishing in the top 1, 3 and 10 places, read
+# from the official classification (a disqualified car loses its place).
+# ---------------------------------------------------------------------------
+
+OUTCOMES = {"win": 1, "podium": 3, "points": 10}
+
+# ---------------------------------------------------------------------------
 # Simulation defaults
 # ---------------------------------------------------------------------------
 

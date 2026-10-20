@@ -12,11 +12,15 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from f1predict import __version__, config
 from f1predict.log import setup_logging
+from f1predict.models import ModelName
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from f1predict.data.fetch import PracticeSummary, SeasonSummary
 
 # ---------------------------------------------------------------------------
@@ -168,6 +172,58 @@ def build_features_command() -> None:
     console.print(f"Saved {len(features)} rows to {path}")
 
 
+@app.command("backtest")
+def backtest_command(
+    model: Annotated[ModelName, typer.Option(help="Model to evaluate.")] = "baseline",
+    seasons: Annotated[
+        list[int] | None,
+        typer.Option(
+            "--season",
+            min=config.FIRST_SEASON + 1,
+            max=config.LAST_SEASON,
+            help="Season to backtest; repeat for several. "
+            "Default: 2024 (validation), 2025 and 2026 (test).",
+        ),
+    ] = None,
+) -> None:
+    """Predict every race of the chosen seasons using only earlier races, and score it.
+
+    Prints season averages with 95% confidence intervals and saves the per-race results.
+    """
+    from f1predict.evaluate.backtest import (
+        PredictionError,
+        completed_races,
+        run_backtest,
+        save_backtest,
+    )
+    from f1predict.features.build import load_features
+    from f1predict.models import make_model
+
+    setup_logging(log_file=config.LOG_DIR / "backtest.log")
+    chosen = sorted(set(seasons or [config.VALIDATION_SEASON, *config.TEST_SEASONS]))
+    try:
+        features = load_features()
+    except FileNotFoundError as exc:
+        console.print(f"[bold red]No features yet:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if not completed_races(features, chosen):
+        console.print(f"[bold red]No completed races to backtest in {chosen}.[/bold red]")
+        raise typer.Exit(code=1)
+
+    try:
+        result = run_backtest(lambda: make_model(model), features, chosen)
+    except PredictionError as exc:
+        console.print(f"[bold red]Backtest failed:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    folder = save_backtest(result, model)
+
+    _print_backtest_summary(result.summary, model)
+    missing = sorted(set(chosen) - set(result.summary["season"]))
+    if missing:
+        console.print(f"[yellow]Warning:[/yellow] no completed races for {missing}")
+    console.print(f"Saved per-race results to {folder}")
+
+
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
@@ -218,6 +274,46 @@ def _print_practice_summary(summaries: list[PracticeSummary]) -> None:
     for summary in summaries:
         for warning in summary.warnings:
             console.print(f"[yellow]Warning:[/yellow] {warning}")
+
+
+def _season_label(season: int) -> str:
+    """Column header for a season, marking the validation and test seasons."""
+    if season == config.VALIDATION_SEASON:
+        return f"{season}\nvalidation"
+    if season in config.TEST_SEASONS:
+        return f"{season}\ntest"
+    return str(season)
+
+
+def _with_ci(fmt: str, row: pd.Series) -> Text:
+    """A season average with its 95% confidence interval dimmed on the line below."""
+    interval = f"[{fmt.format(row['low'])}, {fmt.format(row['high'])}]"
+    return Text.assemble(fmt.format(row["value"]), "\n", (interval, "dim"))
+
+
+def _print_backtest_summary(summary: pd.DataFrame, model: str) -> None:
+    """Show one row per metric and one column per season: average, then its 95% CI."""
+    from f1predict.evaluate.metrics import METRICS
+
+    seasons = sorted(summary["season"].unique())
+    table = Table(title=f"Backtest: {model}")
+    table.add_column("Metric")
+    table.add_column("Better")
+    for season in seasons:
+        table.add_column(_season_label(season), justify="right")
+    races = summary.groupby("season")["races"].first()
+    table.add_row("Races", "", *(str(races[season]) for season in seasons))
+    for metric, spec in METRICS.items():
+        rows = summary[summary["metric"] == metric].set_index("season")
+        if rows.empty:
+            continue
+        cells = [_with_ci(spec.fmt, rows.loc[s]) if s in rows.index else "-" for s in seasons]
+        table.add_row(spec.label, spec.better, *cells)
+    console.print(table)
+    console.print(
+        "Season averages over races, with 95% bootstrap confidence intervals below.\n"
+        "MAE and Spearman compare the order of the cars that finished."
+    )
 
 
 # ---------------------------------------------------------------------------
