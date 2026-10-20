@@ -33,3 +33,7 @@ desktop.ini
 # Only the small artifacts the deployed app reads are committed.
 data/*
 !data/published/
+
+# Trained models are rebuilt locally with `python -m f1predict train`.
+models/*
+!models/.gitkeep

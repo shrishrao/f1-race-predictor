@@ -1,9 +1,13 @@
-"""A small, seeded, made-up championship in the exact shape of the real interim tables.
+"""Small, seeded, made-up data in the exact shape of the real tables.
 
-The leakage test needs many races with results, qualifying, sprints and practice, and the
-real data isn't in the repo (or CI). This builds two seasons of five rounds each: three
-teams, six drivers, one sprint weekend per season, a pit-lane start, retirements, a
-non-starter, and an FP1 stand-in, all from a fixed random seed.
+``make_tables`` builds a championship in the shape of the interim tables. The leakage test
+needs many races with results, qualifying, sprints and practice, and the real data isn't in
+the repo (or CI). It has two seasons of five rounds each: three teams, six drivers, one
+sprint weekend per season, a pit-lane start, retirements, a non-starter, and an FP1
+stand-in, all from a fixed random seed.
+
+``learnable_features`` builds a features table with one obvious signal, for checking that
+the ranker actually learns.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import numpy as np
+import pandas as pd
 
 from f1predict.data.practice import PRACTICE_DTYPES
 from f1predict.data.status import classify_status
@@ -20,7 +25,7 @@ from f1predict.data.tables import (
     SCHEDULE_DTYPES,
     typed_frame,
 )
-from f1predict.features.build import RaceTables
+from f1predict.features.build import FEATURE_COLUMNS, TARGET_COLUMNS, RaceTables
 
 DRIVERS = [
     ("hamilton", "HAM", 44, "mercedes"),
@@ -214,3 +219,50 @@ def scramble_after(
         sprint=tables.sprint,
         practice=tables.practice,
     )
+
+
+def learnable_features(races: int = 40, cars: int = 10, seed: int = 0) -> pd.DataFrame:
+    """A features table (20 races a season from 2020) where the smallest quali gap always wins.
+
+    Every other feature is missing, the grid is a random shuffle, and one random car per
+    race retires: it's classified last and has no finishing rank.
+    """
+    rng = np.random.default_rng(seed)
+    rows = []
+    for seq in range(races):
+        gaps = rng.uniform(0, 3, cars)
+        grid = rng.permutation(cars) + 1
+        retiree = int(rng.integers(cars))
+        order = [int(car) for car in np.argsort(gaps) if car != retiree]
+        position = {car: place for place, car in enumerate(order, start=1)} | {retiree: cars}
+        for car in range(cars):
+            finished = car != retiree
+            rows.append(
+                {
+                    "season": 2020 + seq // 20,
+                    "round": seq % 20 + 1,
+                    "race_seq": seq,
+                    "circuit_id": "monza",
+                    "driver_id": f"d{car}",
+                    "driver_code": f"D{car}",
+                    "team_id": f"t{car // 2}",
+                    "grid": float(grid[car]),
+                    "pitlane_start": 0.0,
+                    "quali_gap_pole_pct": gaps[car],
+                    "position": position[car],
+                    "status_class": "finished" if finished else "dnf",
+                    "finished": finished,
+                    "finish_rank": float(position[car]) if finished else np.nan,
+                    "n_finishers": float(cars - 1),
+                }
+            )
+    frame = pd.DataFrame(rows)
+    for column in FEATURE_COLUMNS:
+        if column not in frame:
+            frame[column] = np.nan
+    return frame
+
+
+def feature_rows(features: pd.DataFrame, race_seq: int) -> pd.DataFrame:
+    """One race's rows without the outcome, as the backtest passes them to ``predict``."""
+    return features[features["race_seq"] == race_seq].drop(columns=TARGET_COLUMNS)

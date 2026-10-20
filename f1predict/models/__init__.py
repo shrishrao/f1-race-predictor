@@ -18,8 +18,10 @@ from typing import TYPE_CHECKING, Literal, Protocol, Self, get_args
 if TYPE_CHECKING:
     import pandas as pd
 
-ModelName = Literal["baseline"]
+ModelName = Literal["baseline", "ranker"]
 MODEL_NAMES: tuple[str, ...] = get_args(ModelName)
+FeatureSetName = Literal["full", "no_practice", "simple_practice", "no_grid_quali"]
+FEATURE_SET_NAMES: tuple[str, ...] = get_args(FeatureSetName)
 
 # ---------------------------------------------------------------------------
 # The interface
@@ -36,15 +38,33 @@ class RaceModel(Protocol):
         """Predict one race from its feature rows."""
 
 
+def require_one_race(race: pd.DataFrame) -> None:
+    """Raise unless ``race`` holds the rows of exactly one race."""
+    if race[["season", "round"]].drop_duplicates().shape[0] != 1:
+        raise ValueError("predict() takes the rows of exactly one race")
+
+
 # ---------------------------------------------------------------------------
 # Lookup by name
 # ---------------------------------------------------------------------------
 
 
-def make_model(name: str) -> RaceModel:
-    """A new, untrained model by its command-line name (imports only that model's code)."""
+def run_name(name: str, feature_set: str = "full") -> str:
+    """Name for one model's saved results, e.g. ``baseline`` or ``ranker_no_practice``."""
+    return name if name == "baseline" else f"{name}_{feature_set}"
+
+
+def make_model(name: str, feature_set: str = "full") -> RaceModel:
+    """A new, untrained model by its command-line name (imports only that model's code).
+
+    ``feature_set`` picks the ranker's input columns; the grid baseline only uses the grid.
+    """
     if name == "baseline":
         from f1predict.models.baseline import GridBaseline
 
         return GridBaseline()
+    if name == "ranker":
+        from f1predict.models.ranker import RankerModel
+
+        return RankerModel(feature_set=feature_set)
     raise ValueError(f"Unknown model {name!r}; expected one of {MODEL_NAMES}")

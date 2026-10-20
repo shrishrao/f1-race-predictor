@@ -29,6 +29,7 @@ from scipy.special import expit, logit
 from sklearn.isotonic import IsotonicRegression
 
 from f1predict import config
+from f1predict.models import require_one_race
 
 KEYS = ["season", "round", "driver_id"]
 PIT_LANE = 0
@@ -123,8 +124,7 @@ class GridBaseline:
         """
         if self.rates is None:
             raise RuntimeError("Call fit() before predict().")
-        if race[["season", "round"]].drop_duplicates().shape[0] != 1:
-            raise ValueError("predict() takes the rows of exactly one race")
+        require_one_race(race)
 
         out = race[KEYS].copy()
         order = race.sort_values(["grid", "driver_id"]).index

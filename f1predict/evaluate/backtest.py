@@ -60,13 +60,15 @@ class BacktestResult:
 
     ``predictions``: one row per driver per race (prediction next to outcome); ``races``:
     every metric per race; ``summary``: season averages with 95% CIs; ``calibration``:
-    chance given vs how often it happened, per season, outcome and chance bin.
+    chance given vs how often it happened, per season, outcome and chance bin;
+    ``comparison``: differences from the grid baseline with paired CIs, when compared.
     """
 
     predictions: pd.DataFrame
     races: pd.DataFrame
     summary: pd.DataFrame
     calibration: pd.DataFrame
+    comparison: pd.DataFrame | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -95,12 +97,16 @@ def check_prediction(predicted: pd.DataFrame, race: pd.DataFrame, label: str) ->
 
 
 def predict_races(
-    make_model: Callable[[], RaceModel], features: pd.DataFrame, seasons: Iterable[int]
+    make_model: Callable[[], RaceModel],
+    features: pd.DataFrame,
+    seasons: Iterable[int],
+    progress: Callable[[str], None] | None = None,
 ) -> pd.DataFrame:
     """Predict every completed race of ``seasons``, each by a model trained on earlier races.
 
     ``make_model`` returns a new, untrained model each time (a model class works). A race
-    with no earlier race to learn from is skipped. Returns one row per driver per race: ids,
+    with no earlier race to learn from is skipped. ``progress``, if given, is called with a
+    label like ``"2025 round 3"`` after each race. Returns one row per driver per race: ids,
     grid, the model's prediction columns, and the actual outcome columns.
     """
     seasons = sorted(seasons)
@@ -112,28 +118,36 @@ def predict_races(
         label = f"{race['season'].iloc[0]} round {race['round'].iloc[0]}"
         if history.empty:
             logger.warning("Skipping %s: there is no earlier race to learn from", label)
-            continue
-        model = make_model().fit(history)
-        predicted = model.predict(race.drop(columns=TARGET_COLUMNS))
-        check_prediction(predicted, race, label)
-        new_columns = [c for c in predicted.columns if c in KEYS or c not in race.columns]
-        predictions.append(
-            race[[*RACE_COLUMNS, *TARGET_COLUMNS]].merge(predicted[new_columns], on=KEYS)
-        )
+        else:
+            model = make_model().fit(history)
+            predicted = model.predict(race.drop(columns=TARGET_COLUMNS))
+            check_prediction(predicted, race, label)
+            new_columns = [c for c in predicted.columns if c in KEYS or c not in race.columns]
+            predictions.append(
+                race[[*RACE_COLUMNS, *TARGET_COLUMNS]].merge(predicted[new_columns], on=KEYS)
+            )
+        if progress is not None:
+            progress(label)
     if not predictions:
         raise ValueError(f"No completed races to backtest in seasons {seasons}")
     return pd.concat(predictions, ignore_index=True)
 
 
+def score_predictions(predictions: pd.DataFrame) -> BacktestResult:
+    """Score a backtest's predictions: metrics per race, season summaries, calibration."""
+    predictions = add_outcomes(predictions)
+    races = race_metrics(predictions)
+    return BacktestResult(predictions, races, summarize(races), calibration_table(predictions))
+
+
 def run_backtest(
-    make_model: Callable[[], RaceModel], features: pd.DataFrame, seasons: Iterable[int]
+    make_model: Callable[[], RaceModel],
+    features: pd.DataFrame,
+    seasons: Iterable[int],
+    progress: Callable[[str], None] | None = None,
 ) -> BacktestResult:
     """The whole backtest for one model: predict every race, then score and summarize."""
-    predictions = add_outcomes(predict_races(make_model, features, seasons))
-    races = race_metrics(predictions)
-    for season, group in races.groupby("season"):
-        logger.info("%s: backtested %d races", season, len(group))
-    return BacktestResult(predictions, races, summarize(races), calibration_table(predictions))
+    return score_predictions(predict_races(make_model, features, seasons, progress))
 
 
 # ---------------------------------------------------------------------------
@@ -150,13 +164,16 @@ def save_backtest(result: BacktestResult, model_name: str, folder: Path | None =
     """Save a backtest and return its folder.
 
     ``predictions.parquet`` (one row per driver per race), ``races.csv`` (metrics per race),
-    ``calibration.csv``, and ``summary.json`` (season averages with confidence intervals).
+    ``calibration.csv``, ``summary.json`` (season averages with confidence intervals) and,
+    for a model compared with the baseline, ``vs_baseline.csv``.
     """
     target = folder or backtest_dir(model_name)
     target.mkdir(parents=True, exist_ok=True)
     result.predictions.to_parquet(target / "predictions.parquet", index=False)
     result.races.to_csv(target / "races.csv", index=False, float_format="%.6g")
     result.calibration.to_csv(target / "calibration.csv", index=False, float_format="%.6g")
+    if result.comparison is not None:
+        result.comparison.to_csv(target / "vs_baseline.csv", index=False, float_format="%.6g")
     summary = {
         "model": model_name,
         "bootstrap_samples": BOOTSTRAP_SAMPLES,
