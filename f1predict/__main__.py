@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from f1predict.evaluate.dnf import DNFComparison
     from f1predict.models.dnf import DNFModel
     from f1predict.models.ranker import RankerModel
+    from f1predict.publish import PublishSummary
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -482,6 +483,49 @@ def update(
     _print_changes(before, features, schedule)
     _train_and_save(features, "full", details=False)
     _print_next_step(features, schedule)
+    console.print("To refresh the app: `python -m f1predict publish`, then commit data/published.")
+
+
+@app.command("publish")
+def publish_command(
+    grid_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--grid-override",
+            exists=True,
+            dir_okay=False,
+            help="JSON file with the final grid of the upcoming race, as for `predict`.",
+        ),
+    ] = None,
+) -> None:
+    """Write what the Streamlit app shows into data/published, ready to commit.
+
+    Predictions for every race of the test seasons (and the next race once it's qualified),
+    the race list, the backtest results and copies of the models. Run it after `update`,
+    then commit data/published to update the app.
+    """
+    from f1predict.api import ModelsOutOfDateError, RaceUnavailableError
+    from f1predict.data.tables import load_table
+    from f1predict.models.store import ModelFileError
+    from f1predict.override import GridOverrideError, load_grid_override
+    from f1predict.publish import publish, published_races
+
+    setup_logging(log_file=config.LOG_DIR / "publish.log")
+    try:
+        override = None if grid_override is None else load_grid_override(grid_override)
+        races = len(published_races(load_table("schedule"), config.TEST_SEASONS))
+        with _race_progress(races, "Publishing") as progress:
+            summary = publish(grid_override=override, progress=progress)
+    except (
+        RaceUnavailableError,
+        ModelsOutOfDateError,
+        GridOverrideError,
+        ModelFileError,
+        FileNotFoundError,
+    ) as exc:
+        console.print(f"[bold red]Publish failed:[/bold red] {escape(str(exc))}")
+        raise typer.Exit(code=1) from exc
+    _print_publish(summary)
 
 
 # ---------------------------------------------------------------------------
@@ -1002,6 +1046,43 @@ def _print_winner(drivers: list[dict[str, Any]]) -> None:
             f"was {escape(favourite['name'] or favourite['driver_id'])} at "
             f"{_percent(favourite['p_win'])})."
         )
+
+
+# ---------------------------------------------------------------------------
+# Publish output
+# ---------------------------------------------------------------------------
+
+
+def _shown_path(path: Path) -> str:
+    """A path relative to the repo when it's inside it, else as it is."""
+    return str(
+        path.relative_to(config.REPO_ROOT) if path.is_relative_to(config.REPO_ROOT) else path
+    )
+
+
+def _print_publish(summary: PublishSummary) -> None:
+    """What was published, which files changed, and what to commit."""
+    table = Table(title="Published", show_header=False)
+    table.add_column("What", style="bold")
+    table.add_column("Count", justify="right")
+    table.add_row("Races run (models trained on earlier races only)", str(summary.completed))
+    table.add_row("Races qualified, not run (saved models)", str(summary.upcoming))
+    table.add_row("Races not qualified yet (listed, no prediction)", str(summary.scheduled))
+    table.add_row("Files changed", str(len(summary.changed)))
+    table.add_row("Files unchanged", str(summary.unchanged))
+    table.add_row("Files removed", str(len(summary.removed)))
+    console.print(table)
+    touched = [*summary.changed, *summary.removed]
+    for path in touched[:12]:
+        console.print(f"  {_shown_path(path)}")
+    if len(touched) > 12:
+        console.print(f"  ... and {len(touched) - 12} more")
+    if touched:
+        console.print(f"Commit {_shown_path(summary.folder)} to update the app.")
+    else:
+        console.print("Nothing changed, so there's nothing to commit.")
+    for warning in summary.warnings:
+        console.print(f"[yellow]Warning:[/yellow] {escape(warning)}")
 
 
 # ---------------------------------------------------------------------------

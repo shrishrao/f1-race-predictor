@@ -1,0 +1,108 @@
+{
+  "format": 1,
+  "f1predict_version": "0.1.0",
+  "lightgbm_version": "4.7.0",
+  "feature_set": "full",
+  "features": [
+    "grid",
+    "pitlane_start",
+    "quali_gap_pole_pct",
+    "quali_gap_teammate_pct",
+    "drv_avg_finish_5",
+    "team_pts_3",
+    "drv_dnf_rate",
+    "team_dnf_rate",
+    "sprint_pos",
+    "fp1_best_gap_pct",
+    "fp2_best_gap_pct",
+    "fp3_best_gap_pct",
+    "fp_best_gap_pct",
+    "fp1_longrun_gap_pct",
+    "fp2_longrun_gap_pct",
+    "fp3_longrun_gap_pct",
+    "longrun_best_gap_pct"
+  ],
+  "settings": {
+    "n_estimators": 50,
+    "num_leaves": 3,
+    "min_child_samples": 20,
+    "gain": "exponential"
+  },
+  "trained_on": {
+    "races": 189,
+    "finishers": 3219,
+    "first_race": "2018 round 1",
+    "last_race": "2026 round 17"
+  },
+  "temperature": 0.7073277986014198,
+  "importance": [
+    {
+      "feature": "grid",
+      "gain_share": 0.6269305942924865
+    },
+    {
+      "feature": "drv_avg_finish_5",
+      "gain_share": 0.15495741279186728
+    },
+    {
+      "feature": "team_pts_3",
+      "gain_share": 0.11181867461881499
+    },
+    {
+      "feature": "quali_gap_pole_pct",
+      "gain_share": 0.10149535457575148
+    },
+    {
+      "feature": "quali_gap_teammate_pct",
+      "gain_share": 0.0029845430791850813
+    },
+    {
+      "feature": "drv_dnf_rate",
+      "gain_share": 0.0010130516878337444
+    },
+    {
+      "feature": "fp3_best_gap_pct",
+      "gain_share": 0.0008003689540608495
+    },
+    {
+      "feature": "team_dnf_rate",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "pitlane_start",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "sprint_pos",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp1_best_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp2_best_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp_best_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp1_longrun_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp2_longrun_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "fp3_longrun_gap_pct",
+      "gain_share": 0.0
+    },
+    {
+      "feature": "longrun_best_gap_pct",
+      "gain_share": 0.0
+    }
+  ]
+}

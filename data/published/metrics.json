@@ -1,0 +1,2502 @@
+{
+  "f1predict_version": "0.1.0",
+  "validation_season": 2024,
+  "test_seasons": [
+    2025,
+    2026
+  ],
+  "races": {
+    "2025": 24,
+    "2026": 17
+  },
+  "metrics": {
+    "winner_correct": {
+      "label": "Winner accuracy",
+      "better": "higher",
+      "format": "{:.0%}"
+    },
+    "podium_hit_rate": {
+      "label": "Podium hit rate",
+      "better": "higher",
+      "format": "{:.0%}"
+    },
+    "mae": {
+      "label": "Position MAE",
+      "better": "lower",
+      "format": "{:.2f}"
+    },
+    "spearman": {
+      "label": "Spearman",
+      "better": "higher",
+      "format": "{:.2f}"
+    },
+    "brier_win": {
+      "label": "Brier: win",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "brier_podium": {
+      "label": "Brier: podium",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "brier_points": {
+      "label": "Brier: points",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "log_loss_win": {
+      "label": "Log loss: win",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "log_loss_podium": {
+      "label": "Log loss: podium",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "log_loss_points": {
+      "label": "Log loss: points",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "brier_dnf": {
+      "label": "Brier: DNF",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "log_loss_dnf": {
+      "label": "Log loss: DNF",
+      "better": "lower",
+      "format": "{:.3f}"
+    },
+    "auc_dnf": {
+      "label": "ROC AUC: DNF",
+      "better": "higher",
+      "format": "{:.3f}"
+    }
+  },
+  "vs_baseline": [
+    {
+      "metric": "winner_correct",
+      "season": 2025,
+      "model": {
+        "value": 0.5833,
+        "low": 0.375,
+        "high": 0.7917
+      },
+      "baseline": {
+        "value": 0.6667,
+        "low": 0.5,
+        "high": 0.8333
+      },
+      "difference": {
+        "value": -0.0833,
+        "low": -0.2917,
+        "high": 0.125,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "winner_correct",
+      "season": 2026,
+      "model": {
+        "value": 0.7647,
+        "low": 0.5294,
+        "high": 0.9412
+      },
+      "baseline": {
+        "value": 0.7059,
+        "low": 0.4706,
+        "high": 0.8824
+      },
+      "difference": {
+        "value": 0.0588,
+        "low": 0.0,
+        "high": 0.1765,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "model": {
+        "value": 0.7778,
+        "low": 0.7083,
+        "high": 0.8472
+      },
+      "baseline": {
+        "value": 0.75,
+        "low": 0.6667,
+        "high": 0.8333
+      },
+      "difference": {
+        "value": 0.0278,
+        "low": -0.0278,
+        "high": 0.0833,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "model": {
+        "value": 0.6471,
+        "low": 0.5294,
+        "high": 0.7843
+      },
+      "baseline": {
+        "value": 0.6275,
+        "low": 0.5098,
+        "high": 0.7451
+      },
+      "difference": {
+        "value": 0.0196,
+        "low": 0.0,
+        "high": 0.0588,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "mae",
+      "season": 2025,
+      "model": {
+        "value": 2.3591,
+        "low": 2.0751,
+        "high": 2.6757
+      },
+      "baseline": {
+        "value": 2.362,
+        "low": 2.0775,
+        "high": 2.6659
+      },
+      "difference": {
+        "value": -0.0029,
+        "low": -0.2111,
+        "high": 0.2054,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "mae",
+      "season": 2026,
+      "model": {
+        "value": 1.9335,
+        "low": 1.6383,
+        "high": 2.222
+      },
+      "baseline": {
+        "value": 2.0195,
+        "low": 1.7074,
+        "high": 2.3242
+      },
+      "difference": {
+        "value": -0.086,
+        "low": -0.351,
+        "high": 0.207,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "spearman",
+      "season": 2025,
+      "model": {
+        "value": 0.773,
+        "low": 0.7054,
+        "high": 0.8304
+      },
+      "baseline": {
+        "value": 0.7547,
+        "low": 0.6831,
+        "high": 0.8178
+      },
+      "difference": {
+        "value": 0.0182,
+        "low": -0.0117,
+        "high": 0.0519,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "spearman",
+      "season": 2026,
+      "model": {
+        "value": 0.8362,
+        "low": 0.7819,
+        "high": 0.8874
+      },
+      "baseline": {
+        "value": 0.8146,
+        "low": 0.761,
+        "high": 0.8668
+      },
+      "difference": {
+        "value": 0.0217,
+        "low": -0.0201,
+        "high": 0.0665,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_win",
+      "season": 2025,
+      "model": {
+        "value": 0.0291,
+        "low": 0.0247,
+        "high": 0.0336
+      },
+      "baseline": {
+        "value": 0.0274,
+        "low": 0.0212,
+        "high": 0.0341
+      },
+      "difference": {
+        "value": 0.0016,
+        "low": -0.0041,
+        "high": 0.0075,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_win",
+      "season": 2026,
+      "model": {
+        "value": 0.0247,
+        "low": 0.0195,
+        "high": 0.0308
+      },
+      "baseline": {
+        "value": 0.0226,
+        "low": 0.0167,
+        "high": 0.0301
+      },
+      "difference": {
+        "value": 0.002,
+        "low": -0.0014,
+        "high": 0.005,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_podium",
+      "season": 2025,
+      "model": {
+        "value": 0.0561,
+        "low": 0.0448,
+        "high": 0.0677
+      },
+      "baseline": {
+        "value": 0.0582,
+        "low": 0.0466,
+        "high": 0.07
+      },
+      "difference": {
+        "value": -0.0021,
+        "low": -0.0091,
+        "high": 0.0058,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_podium",
+      "season": 2026,
+      "model": {
+        "value": 0.063,
+        "low": 0.0489,
+        "high": 0.0775
+      },
+      "baseline": {
+        "value": 0.0641,
+        "low": 0.0482,
+        "high": 0.0808
+      },
+      "difference": {
+        "value": -0.0011,
+        "low": -0.0067,
+        "high": 0.0038,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_points",
+      "season": 2025,
+      "model": {
+        "value": 0.1636,
+        "low": 0.1465,
+        "high": 0.1831
+      },
+      "baseline": {
+        "value": 0.1634,
+        "low": 0.1394,
+        "high": 0.191
+      },
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0105,
+        "high": 0.0111,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "brier_points",
+      "season": 2026,
+      "model": {
+        "value": 0.1733,
+        "low": 0.1429,
+        "high": 0.206
+      },
+      "baseline": {
+        "value": 0.1682,
+        "low": 0.1419,
+        "high": 0.1953
+      },
+      "difference": {
+        "value": 0.0052,
+        "low": -0.0101,
+        "high": 0.0194,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_win",
+      "season": 2025,
+      "model": {
+        "value": 0.0936,
+        "low": 0.0831,
+        "high": 0.1044
+      },
+      "baseline": {
+        "value": 0.0917,
+        "low": 0.0747,
+        "high": 0.1108
+      },
+      "difference": {
+        "value": 0.0019,
+        "low": -0.0145,
+        "high": 0.018,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_win",
+      "season": 2026,
+      "model": {
+        "value": 0.0866,
+        "low": 0.0703,
+        "high": 0.1075
+      },
+      "baseline": {
+        "value": 0.0863,
+        "low": 0.0603,
+        "high": 0.1278
+      },
+      "difference": {
+        "value": 0.0003,
+        "low": -0.0238,
+        "high": 0.0158,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "model": {
+        "value": 0.195,
+        "low": 0.161,
+        "high": 0.2306
+      },
+      "baseline": {
+        "value": 0.203,
+        "low": 0.1671,
+        "high": 0.2417
+      },
+      "difference": {
+        "value": -0.0081,
+        "low": -0.0302,
+        "high": 0.0162,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "model": {
+        "value": 0.1999,
+        "low": 0.1654,
+        "high": 0.2358
+      },
+      "baseline": {
+        "value": 0.2075,
+        "low": 0.1625,
+        "high": 0.2575
+      },
+      "difference": {
+        "value": -0.0076,
+        "low": -0.0321,
+        "high": 0.0119,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_points",
+      "season": 2025,
+      "model": {
+        "value": 0.4991,
+        "low": 0.4578,
+        "high": 0.5467
+      },
+      "baseline": {
+        "value": 0.5002,
+        "low": 0.443,
+        "high": 0.566
+      },
+      "difference": {
+        "value": -0.0011,
+        "low": -0.0257,
+        "high": 0.0239,
+        "verdict": 0
+      }
+    },
+    {
+      "metric": "log_loss_points",
+      "season": 2026,
+      "model": {
+        "value": 0.5314,
+        "low": 0.4569,
+        "high": 0.6118
+      },
+      "baseline": {
+        "value": 0.5155,
+        "low": 0.4519,
+        "high": 0.5815
+      },
+      "difference": {
+        "value": 0.0159,
+        "low": -0.021,
+        "high": 0.05,
+        "verdict": 0
+      }
+    }
+  ],
+  "ablations": [
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "winner_correct",
+      "season": 2025,
+      "value": 0.5833
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "winner_correct",
+      "season": 2026,
+      "value": 0.7647
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "value": 0.7778
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "value": 0.6471
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "mae",
+      "season": 2025,
+      "value": 2.3591
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "mae",
+      "season": 2026,
+      "value": 1.9335
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "spearman",
+      "season": 2025,
+      "value": 0.773
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "spearman",
+      "season": 2026,
+      "value": 0.8362
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_win",
+      "season": 2025,
+      "value": 0.0291
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_win",
+      "season": 2026,
+      "value": 0.0247
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_podium",
+      "season": 2025,
+      "value": 0.0561
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_podium",
+      "season": 2026,
+      "value": 0.063
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_points",
+      "season": 2025,
+      "value": 0.1636
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "brier_points",
+      "season": 2026,
+      "value": 0.1733
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_win",
+      "season": 2025,
+      "value": 0.0936
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_win",
+      "season": 2026,
+      "value": 0.0866
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "value": 0.195
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "value": 0.1999
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_points",
+      "season": 2025,
+      "value": 0.4991
+    },
+    {
+      "variant": "ranker_full",
+      "label": "Full model",
+      "metric": "log_loss_points",
+      "season": 2026,
+      "value": 0.5314
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "winner_correct",
+      "season": 2025,
+      "value": 0.5833,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "winner_correct",
+      "season": 2026,
+      "value": 0.7647,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "value": 0.7778,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "value": 0.6471,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "mae",
+      "season": 2025,
+      "value": 2.363,
+      "difference": {
+        "value": 0.0039,
+        "low": -0.0309,
+        "high": 0.0368,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "mae",
+      "season": 2026,
+      "value": 1.9178,
+      "difference": {
+        "value": -0.0157,
+        "low": -0.0471,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "spearman",
+      "season": 2025,
+      "value": 0.7735,
+      "difference": {
+        "value": 0.0005,
+        "low": -0.0041,
+        "high": 0.0065,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "spearman",
+      "season": 2026,
+      "value": 0.84,
+      "difference": {
+        "value": 0.0038,
+        "low": 0.0,
+        "high": 0.0113,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_win",
+      "season": 2025,
+      "value": 0.0292,
+      "difference": {
+        "value": 0.0002,
+        "low": 0.0,
+        "high": 0.0004,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_win",
+      "season": 2026,
+      "value": 0.0247,
+      "difference": {
+        "value": -0.0,
+        "low": -0.0001,
+        "high": 0.0001,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_podium",
+      "season": 2025,
+      "value": 0.0563,
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0002,
+        "high": 0.0005,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_podium",
+      "season": 2026,
+      "value": 0.0631,
+      "difference": {
+        "value": 0.0001,
+        "low": -0.0,
+        "high": 0.0004,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_points",
+      "season": 2025,
+      "value": 0.1637,
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0002,
+        "high": 0.0006,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "brier_points",
+      "season": 2026,
+      "value": 0.1733,
+      "difference": {
+        "value": -0.0001,
+        "low": -0.0003,
+        "high": 0.0002,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_win",
+      "season": 2025,
+      "value": 0.094,
+      "difference": {
+        "value": 0.0004,
+        "low": -0.0001,
+        "high": 0.001,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_win",
+      "season": 2026,
+      "value": 0.0866,
+      "difference": {
+        "value": -0.0001,
+        "low": -0.0003,
+        "high": 0.0002,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "value": 0.1952,
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0005,
+        "high": 0.0009,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "value": 0.2001,
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0001,
+        "high": 0.0007,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_points",
+      "season": 2025,
+      "value": 0.4996,
+      "difference": {
+        "value": 0.0005,
+        "low": -0.0004,
+        "high": 0.0017,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_practice",
+      "label": "No practice",
+      "metric": "log_loss_points",
+      "season": 2026,
+      "value": 0.5314,
+      "difference": {
+        "value": -0.0,
+        "low": -0.0004,
+        "high": 0.0004,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "winner_correct",
+      "season": 2025,
+      "value": 0.5833,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "winner_correct",
+      "season": 2026,
+      "value": 0.7647,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "value": 0.7778,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "value": 0.6471,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "mae",
+      "season": 2025,
+      "value": 2.3741,
+      "difference": {
+        "value": 0.015,
+        "low": -0.0046,
+        "high": 0.0422,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "mae",
+      "season": 2026,
+      "value": 1.9335,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "spearman",
+      "season": 2025,
+      "value": 0.7713,
+      "difference": {
+        "value": -0.0017,
+        "low": -0.0048,
+        "high": 0.001,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "spearman",
+      "season": 2026,
+      "value": 0.8362,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_win",
+      "season": 2025,
+      "value": 0.0292,
+      "difference": {
+        "value": 0.0001,
+        "low": -0.0,
+        "high": 0.0003,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_win",
+      "season": 2026,
+      "value": 0.0247,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_podium",
+      "season": 2025,
+      "value": 0.0563,
+      "difference": {
+        "value": 0.0001,
+        "low": -0.0002,
+        "high": 0.0004,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_podium",
+      "season": 2026,
+      "value": 0.063,
+      "difference": {
+        "value": -0.0,
+        "low": -0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_points",
+      "season": 2025,
+      "value": 0.1638,
+      "difference": {
+        "value": 0.0003,
+        "low": -0.0,
+        "high": 0.0007,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "brier_points",
+      "season": 2026,
+      "value": 0.1733,
+      "difference": {
+        "value": 0.0,
+        "low": -0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_win",
+      "season": 2025,
+      "value": 0.0938,
+      "difference": {
+        "value": 0.0002,
+        "low": -0.0002,
+        "high": 0.0007,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_win",
+      "season": 2026,
+      "value": 0.0866,
+      "difference": {
+        "value": 0.0,
+        "low": 0.0,
+        "high": 0.0,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "value": 0.195,
+      "difference": {
+        "value": 0.0001,
+        "low": -0.0007,
+        "high": 0.0007,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "value": 0.1999,
+      "difference": {
+        "value": 0.0,
+        "low": -0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_points",
+      "season": 2025,
+      "value": 0.4998,
+      "difference": {
+        "value": 0.0007,
+        "low": -0.0001,
+        "high": 0.0019,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_simple_practice",
+      "label": "Simple practice only",
+      "metric": "log_loss_points",
+      "season": 2026,
+      "value": 0.5314,
+      "difference": {
+        "value": 0.0,
+        "low": -0.0,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "winner_correct",
+      "season": 2025,
+      "value": 0.25,
+      "difference": {
+        "value": -0.3333,
+        "low": -0.5833,
+        "high": -0.0833,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "winner_correct",
+      "season": 2026,
+      "value": 0.3529,
+      "difference": {
+        "value": -0.4118,
+        "low": -0.7059,
+        "high": -0.1176,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "value": 0.625,
+      "difference": {
+        "value": -0.1528,
+        "low": -0.25,
+        "high": -0.0556,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "value": 0.5098,
+      "difference": {
+        "value": -0.1373,
+        "low": -0.2745,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "mae",
+      "season": 2025,
+      "value": 3.0702,
+      "difference": {
+        "value": 0.7111,
+        "low": 0.4272,
+        "high": 0.9902,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "mae",
+      "season": 2026,
+      "value": 2.4587,
+      "difference": {
+        "value": 0.5253,
+        "low": 0.3204,
+        "high": 0.7247,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "spearman",
+      "season": 2025,
+      "value": 0.6738,
+      "difference": {
+        "value": -0.0991,
+        "low": -0.1445,
+        "high": -0.0541,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "spearman",
+      "season": 2026,
+      "value": 0.7853,
+      "difference": {
+        "value": -0.051,
+        "low": -0.0808,
+        "high": -0.0202,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_win",
+      "season": 2025,
+      "value": 0.0407,
+      "difference": {
+        "value": 0.0116,
+        "low": 0.0074,
+        "high": 0.0157,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_win",
+      "season": 2026,
+      "value": 0.037,
+      "difference": {
+        "value": 0.0123,
+        "low": 0.007,
+        "high": 0.017,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_podium",
+      "season": 2025,
+      "value": 0.0818,
+      "difference": {
+        "value": 0.0256,
+        "low": 0.0153,
+        "high": 0.0363,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_podium",
+      "season": 2026,
+      "value": 0.0836,
+      "difference": {
+        "value": 0.0206,
+        "low": 0.006,
+        "high": 0.0349,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_points",
+      "season": 2025,
+      "value": 0.1888,
+      "difference": {
+        "value": 0.0252,
+        "low": 0.0162,
+        "high": 0.0349,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "brier_points",
+      "season": 2026,
+      "value": 0.1831,
+      "difference": {
+        "value": 0.0098,
+        "low": 0.0022,
+        "high": 0.0173,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_win",
+      "season": 2025,
+      "value": 0.1409,
+      "difference": {
+        "value": 0.0473,
+        "low": 0.0347,
+        "high": 0.0599,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_win",
+      "season": 2026,
+      "value": 0.1301,
+      "difference": {
+        "value": 0.0435,
+        "low": 0.0243,
+        "high": 0.0586,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "value": 0.2683,
+      "difference": {
+        "value": 0.0733,
+        "low": 0.0423,
+        "high": 0.1032,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "value": 0.2609,
+      "difference": {
+        "value": 0.0611,
+        "low": 0.0255,
+        "high": 0.096,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_points",
+      "season": 2025,
+      "value": 0.5592,
+      "difference": {
+        "value": 0.0601,
+        "low": 0.0392,
+        "high": 0.0825,
+        "verdict": -1
+      }
+    },
+    {
+      "variant": "ranker_no_grid_quali",
+      "label": "No grid or qualifying",
+      "metric": "log_loss_points",
+      "season": 2026,
+      "value": 0.5527,
+      "difference": {
+        "value": 0.0213,
+        "low": -0.0017,
+        "high": 0.0432,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "winner_correct",
+      "season": 2025,
+      "value": 0.6667,
+      "difference": {
+        "value": 0.0833,
+        "low": -0.125,
+        "high": 0.2917,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "winner_correct",
+      "season": 2026,
+      "value": 0.7059,
+      "difference": {
+        "value": -0.0588,
+        "low": -0.1765,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "podium_hit_rate",
+      "season": 2025,
+      "value": 0.75,
+      "difference": {
+        "value": -0.0278,
+        "low": -0.0833,
+        "high": 0.0278,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "podium_hit_rate",
+      "season": 2026,
+      "value": 0.6275,
+      "difference": {
+        "value": -0.0196,
+        "low": -0.0588,
+        "high": 0.0,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "mae",
+      "season": 2025,
+      "value": 2.362,
+      "difference": {
+        "value": 0.0029,
+        "low": -0.2054,
+        "high": 0.2111,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "mae",
+      "season": 2026,
+      "value": 2.0195,
+      "difference": {
+        "value": 0.086,
+        "low": -0.207,
+        "high": 0.351,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "spearman",
+      "season": 2025,
+      "value": 0.7547,
+      "difference": {
+        "value": -0.0182,
+        "low": -0.0519,
+        "high": 0.0117,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "spearman",
+      "season": 2026,
+      "value": 0.8146,
+      "difference": {
+        "value": -0.0217,
+        "low": -0.0665,
+        "high": 0.0201,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_win",
+      "season": 2025,
+      "value": 0.0274,
+      "difference": {
+        "value": -0.0016,
+        "low": -0.0075,
+        "high": 0.0041,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_win",
+      "season": 2026,
+      "value": 0.0226,
+      "difference": {
+        "value": -0.002,
+        "low": -0.005,
+        "high": 0.0014,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_podium",
+      "season": 2025,
+      "value": 0.0582,
+      "difference": {
+        "value": 0.0021,
+        "low": -0.0058,
+        "high": 0.0091,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_podium",
+      "season": 2026,
+      "value": 0.0641,
+      "difference": {
+        "value": 0.0011,
+        "low": -0.0038,
+        "high": 0.0067,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_points",
+      "season": 2025,
+      "value": 0.1634,
+      "difference": {
+        "value": -0.0002,
+        "low": -0.0111,
+        "high": 0.0105,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "brier_points",
+      "season": 2026,
+      "value": 0.1682,
+      "difference": {
+        "value": -0.0052,
+        "low": -0.0194,
+        "high": 0.0101,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_win",
+      "season": 2025,
+      "value": 0.0917,
+      "difference": {
+        "value": -0.0019,
+        "low": -0.018,
+        "high": 0.0145,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_win",
+      "season": 2026,
+      "value": 0.0863,
+      "difference": {
+        "value": -0.0003,
+        "low": -0.0158,
+        "high": 0.0238,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_podium",
+      "season": 2025,
+      "value": 0.203,
+      "difference": {
+        "value": 0.0081,
+        "low": -0.0162,
+        "high": 0.0302,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_podium",
+      "season": 2026,
+      "value": 0.2075,
+      "difference": {
+        "value": 0.0076,
+        "low": -0.0119,
+        "high": 0.0321,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_points",
+      "season": 2025,
+      "value": 0.5002,
+      "difference": {
+        "value": 0.0011,
+        "low": -0.0239,
+        "high": 0.0257,
+        "verdict": 0
+      }
+    },
+    {
+      "variant": "baseline",
+      "label": "Grid baseline",
+      "metric": "log_loss_points",
+      "season": 2026,
+      "value": 0.5155,
+      "difference": {
+        "value": -0.0159,
+        "low": -0.05,
+        "high": 0.021,
+        "verdict": 0
+      }
+    }
+  ],
+  "dnf_models": {
+    "chosen": "logistic",
+    "label": "Logistic regression",
+    "rows": [
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "brier_dnf",
+        "season": 2025,
+        "value": 0.099,
+        "low": 0.0758,
+        "high": 0.1226
+      },
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "brier_dnf",
+        "season": 2026,
+        "value": 0.1583,
+        "low": 0.1375,
+        "high": 0.1805
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "brier_dnf",
+        "season": 2025,
+        "value": 0.0971,
+        "low": 0.0751,
+        "high": 0.1197
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "brier_dnf",
+        "season": 2026,
+        "value": 0.1488,
+        "low": 0.1277,
+        "high": 0.1723
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "brier_dnf",
+        "season": 2025,
+        "value": 0.0963,
+        "low": 0.0739,
+        "high": 0.1191
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "brier_dnf",
+        "season": 2026,
+        "value": 0.1518,
+        "low": 0.1293,
+        "high": 0.1766
+      },
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "log_loss_dnf",
+        "season": 2025,
+        "value": 0.353,
+        "low": 0.2908,
+        "high": 0.4165
+      },
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "log_loss_dnf",
+        "season": 2026,
+        "value": 0.4991,
+        "low": 0.4491,
+        "high": 0.5526
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "log_loss_dnf",
+        "season": 2025,
+        "value": 0.3436,
+        "low": 0.2884,
+        "high": 0.4
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "log_loss_dnf",
+        "season": 2026,
+        "value": 0.4696,
+        "low": 0.4164,
+        "high": 0.5285
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "log_loss_dnf",
+        "season": 2025,
+        "value": 0.3391,
+        "low": 0.2822,
+        "high": 0.3965
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "log_loss_dnf",
+        "season": 2026,
+        "value": 0.478,
+        "low": 0.4206,
+        "high": 0.5414
+      },
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "auc_dnf",
+        "season": 2025,
+        "value": 0.4733,
+        "low": 0.3568,
+        "high": 0.5849
+      },
+      {
+        "model": "base_rate",
+        "label": "Base rate",
+        "metric": "auc_dnf",
+        "season": 2026,
+        "value": 0.4808,
+        "low": 0.4329,
+        "high": 0.5369
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "auc_dnf",
+        "season": 2025,
+        "value": 0.5752,
+        "low": 0.4797,
+        "high": 0.6544
+      },
+      {
+        "model": "logistic",
+        "label": "Logistic",
+        "metric": "auc_dnf",
+        "season": 2026,
+        "value": 0.6595,
+        "low": 0.6079,
+        "high": 0.7178
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "auc_dnf",
+        "season": 2025,
+        "value": 0.5825,
+        "low": 0.485,
+        "high": 0.666
+      },
+      {
+        "model": "lightgbm",
+        "label": "LightGBM",
+        "metric": "auc_dnf",
+        "season": 2026,
+        "value": 0.6644,
+        "low": 0.6124,
+        "high": 0.7187
+      }
+    ]
+  },
+  "calibration": [
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 732,
+      "predicted": 0.0123,
+      "observed": 0.0014,
+      "low": 0.0002,
+      "high": 0.0077
+    },
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 53,
+      "predicted": 0.1471,
+      "observed": 0.0943,
+      "low": 0.041,
+      "high": 0.2025
+    },
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 26,
+      "predicted": 0.2477,
+      "observed": 0.3077,
+      "low": 0.165,
+      "high": 0.4999
+    },
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 17,
+      "predicted": 0.3498,
+      "observed": 0.5294,
+      "low": 0.3096,
+      "high": 0.7384
+    },
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "n": 17,
+      "predicted": 0.4473,
+      "observed": 0.8235,
+      "low": 0.5897,
+      "high": 0.9381
+    },
+    {
+      "model": "model",
+      "outcome": "win",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 8,
+      "predicted": 0.5243,
+      "observed": 0.5,
+      "low": 0.2152,
+      "high": 0.7848
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 605,
+      "predicted": 0.0241,
+      "observed": 0.0099,
+      "low": 0.0046,
+      "high": 0.0215
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 61,
+      "predicted": 0.1444,
+      "observed": 0.1639,
+      "low": 0.0916,
+      "high": 0.2761
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 36,
+      "predicted": 0.2423,
+      "observed": 0.2778,
+      "low": 0.1585,
+      "high": 0.4399
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 27,
+      "predicted": 0.3331,
+      "observed": 0.2963,
+      "low": 0.1585,
+      "high": 0.4848
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "n": 21,
+      "predicted": 0.4557,
+      "observed": 0.5714,
+      "low": 0.3655,
+      "high": 0.7553
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 29,
+      "predicted": 0.5519,
+      "observed": 0.5172,
+      "low": 0.3443,
+      "high": 0.6861
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.6,
+      "bin_high": 0.7,
+      "n": 23,
+      "predicted": 0.6507,
+      "observed": 0.7826,
+      "low": 0.581,
+      "high": 0.9034
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.7,
+      "bin_high": 0.8,
+      "n": 24,
+      "predicted": 0.7692,
+      "observed": 0.875,
+      "low": 0.69,
+      "high": 0.9566
+    },
+    {
+      "model": "model",
+      "outcome": "podium",
+      "bin_low": 0.8,
+      "bin_high": 0.9,
+      "n": 27,
+      "predicted": 0.8482,
+      "observed": 0.8519,
+      "low": 0.6752,
+      "high": 0.9408
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 41,
+      "predicted": 0.1895,
+      "observed": 0.0244,
+      "low": 0.0043,
+      "high": 0.126
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 327,
+      "predicted": 0.2428,
+      "observed": 0.208,
+      "low": 0.1675,
+      "high": 0.2552
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 116,
+      "predicted": 0.3462,
+      "observed": 0.431,
+      "low": 0.3446,
+      "high": 0.5219
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "n": 48,
+      "predicted": 0.4392,
+      "observed": 0.5625,
+      "low": 0.4227,
+      "high": 0.693
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 34,
+      "predicted": 0.5481,
+      "observed": 0.6471,
+      "low": 0.4791,
+      "high": 0.7851
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.6,
+      "bin_high": 0.7,
+      "n": 26,
+      "predicted": 0.6514,
+      "observed": 0.7692,
+      "low": 0.5795,
+      "high": 0.8897
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.7,
+      "bin_high": 0.8,
+      "n": 34,
+      "predicted": 0.7533,
+      "observed": 0.7941,
+      "low": 0.632,
+      "high": 0.8965
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.8,
+      "bin_high": 0.9,
+      "n": 148,
+      "predicted": 0.8696,
+      "observed": 0.8311,
+      "low": 0.7625,
+      "high": 0.8829
+    },
+    {
+      "model": "model",
+      "outcome": "points",
+      "bin_low": 0.9,
+      "bin_high": 1.0,
+      "n": 79,
+      "predicted": 0.9075,
+      "observed": 0.9114,
+      "low": 0.8282,
+      "high": 0.9564
+    },
+    {
+      "model": "model",
+      "outcome": "dnf",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 92,
+      "predicted": 0.0922,
+      "observed": 0.0652,
+      "low": 0.0302,
+      "high": 0.1351
+    },
+    {
+      "model": "model",
+      "outcome": "dnf",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 661,
+      "predicted": 0.1421,
+      "observed": 0.1286,
+      "low": 0.1052,
+      "high": 0.1563
+    },
+    {
+      "model": "model",
+      "outcome": "dnf",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 76,
+      "predicted": 0.2365,
+      "observed": 0.3816,
+      "low": 0.2806,
+      "high": 0.494
+    },
+    {
+      "model": "model",
+      "outcome": "dnf",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 8,
+      "predicted": 0.3086,
+      "observed": 0.25,
+      "low": 0.0715,
+      "high": 0.5907
+    },
+    {
+      "model": "baseline",
+      "outcome": "win",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 730,
+      "predicted": 0.0082,
+      "observed": 0.0027,
+      "low": 0.0008,
+      "high": 0.0099
+    },
+    {
+      "model": "baseline",
+      "outcome": "win",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 41,
+      "predicted": 0.111,
+      "observed": 0.0732,
+      "low": 0.0252,
+      "high": 0.1943
+    },
+    {
+      "model": "baseline",
+      "outcome": "win",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 41,
+      "predicted": 0.2336,
+      "observed": 0.1951,
+      "low": 0.1023,
+      "high": 0.3401
+    },
+    {
+      "model": "baseline",
+      "outcome": "win",
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "n": 12,
+      "predicted": 0.4943,
+      "observed": 0.75,
+      "low": 0.4677,
+      "high": 0.9111
+    },
+    {
+      "model": "baseline",
+      "outcome": "win",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 29,
+      "predicted": 0.5143,
+      "observed": 0.6552,
+      "low": 0.4734,
+      "high": 0.8006
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 607,
+      "predicted": 0.0214,
+      "observed": 0.0148,
+      "low": 0.0078,
+      "high": 0.0279
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 82,
+      "predicted": 0.1522,
+      "observed": 0.122,
+      "low": 0.0676,
+      "high": 0.2101
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 41,
+      "predicted": 0.3468,
+      "observed": 0.439,
+      "low": 0.2989,
+      "high": 0.5896
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 41,
+      "predicted": 0.5426,
+      "observed": 0.5122,
+      "low": 0.3648,
+      "high": 0.6575
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.6,
+      "bin_high": 0.7,
+      "n": 11,
+      "predicted": 0.6946,
+      "observed": 0.8182,
+      "low": 0.523,
+      "high": 0.9486
+    },
+    {
+      "model": "baseline",
+      "outcome": "podium",
+      "bin_low": 0.7,
+      "bin_high": 0.8,
+      "n": 71,
+      "predicted": 0.7527,
+      "observed": 0.7887,
+      "low": 0.6802,
+      "high": 0.8676
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.0,
+      "bin_high": 0.1,
+      "n": 8,
+      "predicted": 0.0718,
+      "observed": 0.125,
+      "low": 0.0224,
+      "high": 0.4709
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.1,
+      "bin_high": 0.2,
+      "n": 230,
+      "predicted": 0.1471,
+      "observed": 0.1478,
+      "low": 0.1078,
+      "high": 0.1995
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.2,
+      "bin_high": 0.3,
+      "n": 82,
+      "predicted": 0.2267,
+      "observed": 0.2927,
+      "low": 0.2053,
+      "high": 0.3987
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.3,
+      "bin_high": 0.4,
+      "n": 82,
+      "predicted": 0.3643,
+      "observed": 0.2439,
+      "low": 0.1638,
+      "high": 0.3469
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.4,
+      "bin_high": 0.5,
+      "n": 41,
+      "predicted": 0.4377,
+      "observed": 0.439,
+      "low": 0.2989,
+      "high": 0.5896
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.5,
+      "bin_high": 0.6,
+      "n": 74,
+      "predicted": 0.5517,
+      "observed": 0.5676,
+      "low": 0.4541,
+      "high": 0.6743
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.6,
+      "bin_high": 0.7,
+      "n": 56,
+      "predicted": 0.6401,
+      "observed": 0.6429,
+      "low": 0.5119,
+      "high": 0.7554
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.7,
+      "bin_high": 0.8,
+      "n": 116,
+      "predicted": 0.7597,
+      "observed": 0.75,
+      "low": 0.664,
+      "high": 0.8199
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.8,
+      "bin_high": 0.9,
+      "n": 149,
+      "predicted": 0.8781,
+      "observed": 0.8993,
+      "low": 0.8405,
+      "high": 0.938
+    },
+    {
+      "model": "baseline",
+      "outcome": "points",
+      "bin_low": 0.9,
+      "bin_high": 1.0,
+      "n": 15,
+      "predicted": 0.9031,
+      "observed": 0.9333,
+      "low": 0.7018,
+      "high": 0.9881
+    }
+  ],
+  "importance": {
+    "ranker": [
+      {
+        "feature": "grid",
+        "label": "Grid slot",
+        "gain_share": 0.6269
+      },
+      {
+        "feature": "drv_avg_finish_5",
+        "label": "Driver's average finish, last 5",
+        "gain_share": 0.155
+      },
+      {
+        "feature": "team_pts_3",
+        "label": "Team points, last 3 races",
+        "gain_share": 0.1118
+      },
+      {
+        "feature": "quali_gap_pole_pct",
+        "label": "Qualifying gap to pole",
+        "gain_share": 0.1015
+      },
+      {
+        "feature": "quali_gap_teammate_pct",
+        "label": "Qualifying gap to teammate",
+        "gain_share": 0.003
+      },
+      {
+        "feature": "drv_dnf_rate",
+        "label": "Driver DNF rate",
+        "gain_share": 0.001
+      },
+      {
+        "feature": "fp3_best_gap_pct",
+        "label": "FP3 best-lap gap",
+        "gain_share": 0.0008
+      },
+      {
+        "feature": "team_dnf_rate",
+        "label": "Team DNF rate",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "pitlane_start",
+        "label": "Pit-lane start",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "sprint_pos",
+        "label": "Sprint result",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp1_best_gap_pct",
+        "label": "FP1 best-lap gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp2_best_gap_pct",
+        "label": "FP2 best-lap gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp_best_gap_pct",
+        "label": "Best practice-lap gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp1_longrun_gap_pct",
+        "label": "FP1 long-run gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp2_longrun_gap_pct",
+        "label": "FP2 long-run gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "fp3_longrun_gap_pct",
+        "label": "FP3 long-run gap",
+        "gain_share": 0.0
+      },
+      {
+        "feature": "longrun_best_gap_pct",
+        "label": "Best long-run gap",
+        "gain_share": 0.0
+      }
+    ],
+    "dnf": {
+      "kind": "logistic",
+      "unit": "coefficient per standard deviation",
+      "inputs": [
+        {
+          "feature": "grid",
+          "label": "Grid slot",
+          "value": 0.2391
+        },
+        {
+          "feature": "team_dnf_rate",
+          "label": "Team DNF rate",
+          "value": 0.1431
+        },
+        {
+          "feature": "quali_gap_pole_pct",
+          "label": "Qualifying gap to pole",
+          "value": 0.0735
+        },
+        {
+          "feature": "field_dnf_rate",
+          "label": "Field DNF rate, recent races",
+          "value": 0.0493
+        },
+        {
+          "feature": "drv_dnf_rate",
+          "label": "Driver DNF rate",
+          "value": -0.0278
+        },
+        {
+          "feature": "pitlane_start",
+          "label": "Pit-lane start",
+          "value": -0.015
+        },
+        {
+          "feature": "circuit_dnf_rate",
+          "label": "Circuit DNF rate",
+          "value": -0.0139
+        }
+      ]
+    }
+  }
+}

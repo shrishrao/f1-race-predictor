@@ -1,0 +1,441 @@
+{
+  "f1predict_version": "0.1.0",
+  "race": {
+    "season": 2025,
+    "round": 16,
+    "name": "Italian Grand Prix",
+    "circuit_id": "monza",
+    "circuit": "Autodromo Nazionale di Monza",
+    "locality": "Monza",
+    "country": "Italy",
+    "qualifying_start": "2025-09-06T14:00:00Z",
+    "race_start": "2025-09-07T13:00:00Z",
+    "sprint_weekend": false,
+    "status": "completed"
+  },
+  "model": {
+    "source": "retrained",
+    "feature_set": "full",
+    "trained_on": {
+      "races": 163,
+      "finishers": 2763,
+      "first_race": "2018 round 1",
+      "last_race": "2025 round 15"
+    },
+    "ranker_settings": {
+      "n_estimators": 50,
+      "num_leaves": 3,
+      "min_child_samples": 20,
+      "gain": "exponential"
+    },
+    "temperature": 0.7073,
+    "dnf_model": "logistic",
+    "dnf_window": 5,
+    "settings_chosen_on": 2024,
+    "sims": 100000,
+    "seed": 42
+  },
+  "grid_override": null,
+  "drivers": [
+    {
+      "predicted_rank": 1,
+      "driver_id": "norris",
+      "code": "NOR",
+      "name": "Lando Norris",
+      "constructor_id": "mclaren",
+      "team": "McLaren",
+      "grid": 2,
+      "pitlane_start": false,
+      "p_win": 0.3423,
+      "p_podium": 0.7993,
+      "p_points": 0.9065,
+      "p_dnf": 0.0915,
+      "actual": {
+        "position": 2,
+        "position_text": "2",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 2,
+      "driver_id": "piastri",
+      "code": "PIA",
+      "name": "Oscar Piastri",
+      "constructor_id": "mclaren",
+      "team": "McLaren",
+      "grid": 3,
+      "pitlane_start": false,
+      "p_win": 0.2975,
+      "p_podium": 0.7632,
+      "p_points": 0.895,
+      "p_dnf": 0.1046,
+      "actual": {
+        "position": 3,
+        "position_text": "3",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 3,
+      "driver_id": "max_verstappen",
+      "code": "VER",
+      "name": "Max Verstappen",
+      "constructor_id": "red_bull",
+      "team": "Red Bull",
+      "grid": 1,
+      "pitlane_start": false,
+      "p_win": 0.2159,
+      "p_podium": 0.6905,
+      "p_points": 0.9122,
+      "p_dnf": 0.088,
+      "actual": {
+        "position": 1,
+        "position_text": "1",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 4,
+      "driver_id": "leclerc",
+      "code": "LEC",
+      "name": "Charles Leclerc",
+      "constructor_id": "ferrari",
+      "team": "Ferrari",
+      "grid": 4,
+      "pitlane_start": false,
+      "p_win": 0.0436,
+      "p_podium": 0.2158,
+      "p_points": 0.8822,
+      "p_dnf": 0.1033,
+      "actual": {
+        "position": 4,
+        "position_text": "4",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 5,
+      "driver_id": "russell",
+      "code": "RUS",
+      "name": "George Russell",
+      "constructor_id": "mercedes",
+      "team": "Mercedes",
+      "grid": 5,
+      "pitlane_start": false,
+      "p_win": 0.0276,
+      "p_podium": 0.1447,
+      "p_points": 0.8324,
+      "p_dnf": 0.1244,
+      "actual": {
+        "position": 5,
+        "position_text": "5",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 6,
+      "driver_id": "hamilton",
+      "code": "HAM",
+      "name": "Lewis Hamilton",
+      "constructor_id": "ferrari",
+      "team": "Ferrari",
+      "grid": 10,
+      "pitlane_start": false,
+      "p_win": 0.0109,
+      "p_podium": 0.0558,
+      "p_points": 0.6305,
+      "p_dnf": 0.1269,
+      "actual": {
+        "position": 6,
+        "position_text": "6",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 7,
+      "driver_id": "antonelli",
+      "code": "ANT",
+      "name": "Andrea Kimi Antonelli",
+      "constructor_id": "mercedes",
+      "team": "Mercedes",
+      "grid": 6,
+      "pitlane_start": false,
+      "p_win": 0.0106,
+      "p_podium": 0.0544,
+      "p_points": 0.6322,
+      "p_dnf": 0.1066,
+      "actual": {
+        "position": 9,
+        "position_text": "9",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 8,
+      "driver_id": "alonso",
+      "code": "ALO",
+      "name": "Fernando Alonso",
+      "constructor_id": "aston_martin",
+      "team": "Aston Martin",
+      "grid": 8,
+      "pitlane_start": false,
+      "p_win": 0.0068,
+      "p_podium": 0.0365,
+      "p_points": 0.5012,
+      "p_dnf": 0.114,
+      "actual": {
+        "position": 19,
+        "position_text": "R",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 9,
+      "driver_id": "tsunoda",
+      "code": "TSU",
+      "name": "Yuki Tsunoda",
+      "constructor_id": "red_bull",
+      "team": "Red Bull",
+      "grid": 9,
+      "pitlane_start": false,
+      "p_win": 0.0058,
+      "p_podium": 0.0293,
+      "p_points": 0.4318,
+      "p_dnf": 0.1234,
+      "actual": {
+        "position": 13,
+        "position_text": "13",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 10,
+      "driver_id": "bortoleto",
+      "code": "BOR",
+      "name": "Gabriel Bortoleto",
+      "constructor_id": "sauber",
+      "team": "Sauber",
+      "grid": 7,
+      "pitlane_start": false,
+      "p_win": 0.0053,
+      "p_podium": 0.0285,
+      "p_points": 0.4249,
+      "p_dnf": 0.11,
+      "actual": {
+        "position": 8,
+        "position_text": "8",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 11,
+      "driver_id": "stroll",
+      "code": "STR",
+      "name": "Lance Stroll",
+      "constructor_id": "aston_martin",
+      "team": "Aston Martin",
+      "grid": 16,
+      "pitlane_start": false,
+      "p_win": 0.0046,
+      "p_podium": 0.0238,
+      "p_points": 0.3612,
+      "p_dnf": 0.1579,
+      "actual": {
+        "position": 18,
+        "position_text": "18",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 12,
+      "driver_id": "bearman",
+      "code": "BEA",
+      "name": "Oliver Bearman",
+      "constructor_id": "haas",
+      "team": "Haas F1 Team",
+      "grid": 11,
+      "pitlane_start": false,
+      "p_win": 0.0042,
+      "p_podium": 0.0217,
+      "p_points": 0.3393,
+      "p_dnf": 0.1327,
+      "actual": {
+        "position": 12,
+        "position_text": "12",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 13,
+      "driver_id": "hadjar",
+      "code": "HAD",
+      "name": "Isack Hadjar",
+      "constructor_id": "rb",
+      "team": "RB F1 Team",
+      "grid": 19,
+      "pitlane_start": false,
+      "p_win": 0.0034,
+      "p_podium": 0.0192,
+      "p_points": 0.3054,
+      "p_dnf": 0.1903,
+      "actual": {
+        "position": 10,
+        "position_text": "10",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 14,
+      "driver_id": "albon",
+      "code": "ALB",
+      "name": "Alexander Albon",
+      "constructor_id": "williams",
+      "team": "Williams",
+      "grid": 14,
+      "pitlane_start": false,
+      "p_win": 0.0035,
+      "p_podium": 0.0194,
+      "p_points": 0.3132,
+      "p_dnf": 0.1414,
+      "actual": {
+        "position": 7,
+        "position_text": "7",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 15,
+      "driver_id": "hulkenberg",
+      "code": "HUL",
+      "name": "Nico Hülkenberg",
+      "constructor_id": "sauber",
+      "team": "Sauber",
+      "grid": 12,
+      "pitlane_start": false,
+      "p_win": 0.0032,
+      "p_podium": 0.0175,
+      "p_points": 0.3022,
+      "p_dnf": 0.1434,
+      "actual": {
+        "position": 20,
+        "position_text": "W",
+        "status": "Did not start",
+        "status_class": "dns"
+      }
+    },
+    {
+      "predicted_rank": 16,
+      "driver_id": "lawson",
+      "code": "LAW",
+      "name": "Liam Lawson",
+      "constructor_id": "rb",
+      "team": "RB F1 Team",
+      "grid": 18,
+      "pitlane_start": false,
+      "p_win": 0.0031,
+      "p_podium": 0.0176,
+      "p_points": 0.2828,
+      "p_dnf": 0.1705,
+      "actual": {
+        "position": 14,
+        "position_text": "14",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 17,
+      "driver_id": "sainz",
+      "code": "SAI",
+      "name": "Carlos Sainz",
+      "constructor_id": "williams",
+      "team": "Williams",
+      "grid": 13,
+      "pitlane_start": false,
+      "p_win": 0.0032,
+      "p_podium": 0.0177,
+      "p_points": 0.2815,
+      "p_dnf": 0.1567,
+      "actual": {
+        "position": 11,
+        "position_text": "11",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 18,
+      "driver_id": "ocon",
+      "code": "OCO",
+      "name": "Esteban Ocon",
+      "constructor_id": "haas",
+      "team": "Haas F1 Team",
+      "grid": 15,
+      "pitlane_start": false,
+      "p_win": 0.0032,
+      "p_podium": 0.0172,
+      "p_points": 0.2816,
+      "p_dnf": 0.1593,
+      "actual": {
+        "position": 15,
+        "position_text": "15",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 19,
+      "driver_id": "colapinto",
+      "code": "COL",
+      "name": "Franco Colapinto",
+      "constructor_id": "alpine",
+      "team": "Alpine F1 Team",
+      "grid": 17,
+      "pitlane_start": false,
+      "p_win": 0.0029,
+      "p_podium": 0.0151,
+      "p_points": 0.2575,
+      "p_dnf": 0.1568,
+      "actual": {
+        "position": 17,
+        "position_text": "17",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 20,
+      "driver_id": "gasly",
+      "code": "GAS",
+      "name": "Pierre Gasly",
+      "constructor_id": "alpine",
+      "team": "Alpine F1 Team",
+      "grid": 20,
+      "pitlane_start": false,
+      "p_win": 0.0023,
+      "p_podium": 0.0127,
+      "p_points": 0.2265,
+      "p_dnf": 0.1808,
+      "actual": {
+        "position": 16,
+        "position_text": "16",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    }
+  ]
+}

@@ -121,7 +121,8 @@ def save_ranker(
         "temperature": temperature,
         "importance": model.importance().to_dict(orient="records"),
     }
-    meta_path.write_text(json.dumps(description, indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(description, indent=2) + "\n"
+    meta_path.write_text(text, encoding="utf-8", newline="\n")
     return text_path
 
 
@@ -184,7 +185,7 @@ def save_dnf_model(
         }
     else:
         text_path.unlink(missing_ok=True)
-    meta_path.write_text(json.dumps(description, indent=2) + "\n", encoding="utf-8")
+    meta_path.write_text(json.dumps(description, indent=2) + "\n", encoding="utf-8", newline="\n")
     return meta_path
 
 

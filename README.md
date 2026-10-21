@@ -6,8 +6,8 @@ Predicts a Formula 1 race right after qualifying: the full finishing order, plus
 chance to **win**, finish on the **podium**, score **points** (top 10), and **retire** (DNF).
 
 > **Status: in development.** The data pipeline, features, ranker, race simulation, DNF model,
-> backtests (results below), the `predict` and `update` commands and the package API are done.
-> A live Streamlit demo comes next.
+> backtests (results below), the `predict` and `update` commands, the package API and the
+> Streamlit app are done. Deploying the app with a public link comes next.
 
 ## How it works
 
@@ -180,15 +180,33 @@ for driver in result["drivers"][:3]:
     print(driver["name"], driver["p_win"])
 ```
 
+### The app
+
+The Streamlit app shows every 2025 and 2026 race (and the next one once it's qualified): the
+predicted order with each driver's chances, the prediction next to the result for races
+already run, and the backtest results. It never trains or downloads anything: it reads the
+files `publish` writes into `data/published/` (one prediction per race, the race list, the
+backtest numbers and copies of the models), which are committed so the deployed app needs no
+data. Run it locally from the repo root:
+
+```powershell
+python -m f1predict publish
+streamlit run app/streamlit_app.py
+```
+
+After each qualifying session or race: `update`, then `publish`, then commit
+`data/published/`. Publishing again with nothing new changes no file.
+
 ## Project layout
 
 ```
-f1predict/        the Python package: data, features, models, evaluate, CLI
-app/              Streamlit demo app
+f1predict/        the Python package: data, features, models, evaluate, CLI, publish
+app/              Streamlit app (reads data/published only; its own requirements.txt)
 tests/            pytest suite (runs offline; network access is blocked)
-data/published/   small precomputed files the demo app reads (raw caches stay local)
-models/           trained model files
+data/published/   predictions, results and model copies the app reads (rebuilt by publish)
+models/           trained model files (local; the app's copies are in data/published)
 docs/             plots used in this README
+.streamlit/       the app's theme: the same validated palette as the plots
 ```
 
 ## Data sources and licenses

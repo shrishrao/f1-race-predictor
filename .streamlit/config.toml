@@ -1,0 +1,24 @@
+# Settings for the Streamlit app (app/streamlit_app.py), read when it's started from the
+# repo root, as Streamlit Community Cloud does.
+#
+# Colours are the data-viz reference palette also used for the README's plots: categorical
+# slot 1 (blue) is the model and slot 2 (orange) the grid baseline, each stepped for its
+# own background, and the backgrounds are the surfaces the palette was validated against
+# (colour-blind separation and contrast, light and dark).
+
+[browser]
+gatherUsageStats = false
+
+[theme.light]
+primaryColor = "#2a78d6"
+backgroundColor = "#fcfcfb"
+secondaryBackgroundColor = "#f0efec"
+textColor = "#0b0b0b"
+chartCategoricalColors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
+
+[theme.dark]
+primaryColor = "#3987e5"
+backgroundColor = "#1a1a19"
+secondaryBackgroundColor = "#2c2c2a"
+textColor = "#f0efec"
+chartCategoricalColors = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]

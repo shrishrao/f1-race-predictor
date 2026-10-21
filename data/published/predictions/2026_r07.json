@@ -1,0 +1,481 @@
+{
+  "f1predict_version": "0.1.0",
+  "race": {
+    "season": 2026,
+    "round": 7,
+    "name": "Barcelona Grand Prix",
+    "circuit_id": "catalunya",
+    "circuit": "Circuit de Barcelona-Catalunya",
+    "locality": "Barcelona",
+    "country": "Spain",
+    "qualifying_start": "2026-06-13T14:00:00Z",
+    "race_start": "2026-06-14T13:00:00Z",
+    "sprint_weekend": false,
+    "status": "completed"
+  },
+  "model": {
+    "source": "retrained",
+    "feature_set": "full",
+    "trained_on": {
+      "races": 178,
+      "finishers": 3024,
+      "first_race": "2018 round 1",
+      "last_race": "2026 round 6"
+    },
+    "ranker_settings": {
+      "n_estimators": 50,
+      "num_leaves": 3,
+      "min_child_samples": 20,
+      "gain": "exponential"
+    },
+    "temperature": 0.7073,
+    "dnf_model": "logistic",
+    "dnf_window": 5,
+    "settings_chosen_on": 2024,
+    "sims": 100000,
+    "seed": 42
+  },
+  "grid_override": null,
+  "drivers": [
+    {
+      "predicted_rank": 1,
+      "driver_id": "russell",
+      "code": "RUS",
+      "name": "George Russell",
+      "constructor_id": "mercedes",
+      "team": "Mercedes",
+      "grid": 1,
+      "pitlane_start": false,
+      "p_win": 0.4314,
+      "p_podium": 0.8269,
+      "p_points": 0.9058,
+      "p_dnf": 0.0937,
+      "actual": {
+        "position": 2,
+        "position_text": "2",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 2,
+      "driver_id": "antonelli",
+      "code": "ANT",
+      "name": "Andrea Kimi Antonelli",
+      "constructor_id": "mercedes",
+      "team": "Mercedes",
+      "grid": 3,
+      "pitlane_start": false,
+      "p_win": 0.1969,
+      "p_podium": 0.626,
+      "p_points": 0.8928,
+      "p_dnf": 0.108,
+      "actual": {
+        "position": 16,
+        "position_text": "16",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 3,
+      "driver_id": "hamilton",
+      "code": "HAM",
+      "name": "Lewis Hamilton",
+      "constructor_id": "ferrari",
+      "team": "Ferrari",
+      "grid": 2,
+      "pitlane_start": false,
+      "p_win": 0.1638,
+      "p_podium": 0.5718,
+      "p_points": 0.8898,
+      "p_dnf": 0.1097,
+      "actual": {
+        "position": 1,
+        "position_text": "1",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 4,
+      "driver_id": "norris",
+      "code": "NOR",
+      "name": "Lando Norris",
+      "constructor_id": "mclaren",
+      "team": "McLaren",
+      "grid": 4,
+      "pitlane_start": false,
+      "p_win": 0.0606,
+      "p_podium": 0.268,
+      "p_points": 0.8804,
+      "p_dnf": 0.1095,
+      "actual": {
+        "position": 3,
+        "position_text": "3",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 5,
+      "driver_id": "max_verstappen",
+      "code": "VER",
+      "name": "Max Verstappen",
+      "constructor_id": "red_bull",
+      "team": "Red Bull",
+      "grid": 5,
+      "pitlane_start": false,
+      "p_win": 0.0406,
+      "p_podium": 0.1873,
+      "p_points": 0.8433,
+      "p_dnf": 0.1226,
+      "actual": {
+        "position": 4,
+        "position_text": "4",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 6,
+      "driver_id": "leclerc",
+      "code": "LEC",
+      "name": "Charles Leclerc",
+      "constructor_id": "ferrari",
+      "team": "Ferrari",
+      "grid": 10,
+      "pitlane_start": false,
+      "p_win": 0.0226,
+      "p_podium": 0.1078,
+      "p_points": 0.7504,
+      "p_dnf": 0.1379,
+      "actual": {
+        "position": 15,
+        "position_text": "15",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 7,
+      "driver_id": "piastri",
+      "code": "PIA",
+      "name": "Oscar Piastri",
+      "constructor_id": "mclaren",
+      "team": "McLaren",
+      "grid": 7,
+      "pitlane_start": false,
+      "p_win": 0.0229,
+      "p_podium": 0.1064,
+      "p_points": 0.7494,
+      "p_dnf": 0.1369,
+      "actual": {
+        "position": 5,
+        "position_text": "5",
+        "status": "Finished",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 8,
+      "driver_id": "hadjar",
+      "code": "HAD",
+      "name": "Isack Hadjar",
+      "constructor_id": "red_bull",
+      "team": "Red Bull",
+      "grid": 6,
+      "pitlane_start": false,
+      "p_win": 0.0132,
+      "p_podium": 0.0643,
+      "p_points": 0.6252,
+      "p_dnf": 0.1197,
+      "actual": {
+        "position": 6,
+        "position_text": "6",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 9,
+      "driver_id": "lawson",
+      "code": "LAW",
+      "name": "Liam Lawson",
+      "constructor_id": "rb",
+      "team": "RB F1 Team",
+      "grid": 8,
+      "pitlane_start": false,
+      "p_win": 0.0072,
+      "p_podium": 0.0358,
+      "p_points": 0.4394,
+      "p_dnf": 0.1313,
+      "actual": {
+        "position": 8,
+        "position_text": "8",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 10,
+      "driver_id": "hulkenberg",
+      "code": "HUL",
+      "name": "Nico Hülkenberg",
+      "constructor_id": "audi",
+      "team": "Audi",
+      "grid": 9,
+      "pitlane_start": false,
+      "p_win": 0.005,
+      "p_podium": 0.0236,
+      "p_points": 0.3268,
+      "p_dnf": 0.1389,
+      "actual": {
+        "position": 20,
+        "position_text": "R",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 11,
+      "driver_id": "gasly",
+      "code": "GAS",
+      "name": "Pierre Gasly",
+      "constructor_id": "alpine",
+      "team": "Alpine F1 Team",
+      "grid": 14,
+      "pitlane_start": false,
+      "p_win": 0.0035,
+      "p_podium": 0.0185,
+      "p_points": 0.2734,
+      "p_dnf": 0.1536,
+      "actual": {
+        "position": 7,
+        "position_text": "7",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 12,
+      "driver_id": "arvid_lindblad",
+      "code": "LIN",
+      "name": "Arvid Lindblad",
+      "constructor_id": "rb",
+      "team": "RB F1 Team",
+      "grid": 11,
+      "pitlane_start": false,
+      "p_win": 0.0036,
+      "p_podium": 0.0176,
+      "p_points": 0.2566,
+      "p_dnf": 0.1518,
+      "actual": {
+        "position": 9,
+        "position_text": "9",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 13,
+      "driver_id": "colapinto",
+      "code": "COL",
+      "name": "Franco Colapinto",
+      "constructor_id": "alpine",
+      "team": "Alpine F1 Team",
+      "grid": 13,
+      "pitlane_start": false,
+      "p_win": 0.003,
+      "p_podium": 0.0163,
+      "p_points": 0.2438,
+      "p_dnf": 0.1571,
+      "actual": {
+        "position": 10,
+        "position_text": "10",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 14,
+      "driver_id": "sainz",
+      "code": "SAI",
+      "name": "Carlos Sainz",
+      "constructor_id": "williams",
+      "team": "Williams",
+      "grid": 16,
+      "pitlane_start": false,
+      "p_win": 0.0029,
+      "p_podium": 0.0155,
+      "p_points": 0.2223,
+      "p_dnf": 0.1886,
+      "actual": {
+        "position": 12,
+        "position_text": "12",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 15,
+      "driver_id": "albon",
+      "code": "ALB",
+      "name": "Alexander Albon",
+      "constructor_id": "williams",
+      "team": "Williams",
+      "grid": 18,
+      "pitlane_start": false,
+      "p_win": 0.003,
+      "p_podium": 0.0155,
+      "p_points": 0.2261,
+      "p_dnf": 0.1933,
+      "actual": {
+        "position": 18,
+        "position_text": "R",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 16,
+      "driver_id": "bortoleto",
+      "code": "BOR",
+      "name": "Gabriel Bortoleto",
+      "constructor_id": "audi",
+      "team": "Audi",
+      "grid": 12,
+      "pitlane_start": false,
+      "p_win": 0.0029,
+      "p_podium": 0.0154,
+      "p_points": 0.2323,
+      "p_dnf": 0.1636,
+      "actual": {
+        "position": 11,
+        "position_text": "11",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 17,
+      "driver_id": "bearman",
+      "code": "BEA",
+      "name": "Oliver Bearman",
+      "constructor_id": "haas",
+      "team": "Haas F1 Team",
+      "grid": 15,
+      "pitlane_start": false,
+      "p_win": 0.0031,
+      "p_podium": 0.0153,
+      "p_points": 0.2216,
+      "p_dnf": 0.1592,
+      "actual": {
+        "position": 17,
+        "position_text": "17",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 18,
+      "driver_id": "ocon",
+      "code": "OCO",
+      "name": "Esteban Ocon",
+      "constructor_id": "haas",
+      "team": "Haas F1 Team",
+      "grid": 17,
+      "pitlane_start": false,
+      "p_win": 0.0029,
+      "p_podium": 0.0141,
+      "p_points": 0.2109,
+      "p_dnf": 0.205,
+      "actual": {
+        "position": 13,
+        "position_text": "13",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 19,
+      "driver_id": "perez",
+      "code": "PER",
+      "name": "Sergio Pérez",
+      "constructor_id": "cadillac",
+      "team": "Cadillac F1 Team",
+      "grid": 19,
+      "pitlane_start": false,
+      "p_win": 0.0029,
+      "p_podium": 0.0142,
+      "p_points": 0.2102,
+      "p_dnf": 0.2066,
+      "actual": {
+        "position": 14,
+        "position_text": "14",
+        "status": "Lapped",
+        "status_class": "finished"
+      }
+    },
+    {
+      "predicted_rank": 20,
+      "driver_id": "bottas",
+      "code": "BOT",
+      "name": "Valtteri Bottas",
+      "constructor_id": "cadillac",
+      "team": "Cadillac F1 Team",
+      "grid": 20,
+      "pitlane_start": false,
+      "p_win": 0.0028,
+      "p_podium": 0.0137,
+      "p_points": 0.2095,
+      "p_dnf": 0.2144,
+      "actual": {
+        "position": 21,
+        "position_text": "R",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 21,
+      "driver_id": "stroll",
+      "code": "STR",
+      "name": "Lance Stroll",
+      "constructor_id": "aston_martin",
+      "team": "Aston Martin",
+      "grid": 21,
+      "pitlane_start": false,
+      "p_win": 0.0024,
+      "p_podium": 0.013,
+      "p_points": 0.2003,
+      "p_dnf": 0.243,
+      "actual": {
+        "position": 22,
+        "position_text": "R",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    },
+    {
+      "predicted_rank": 22,
+      "driver_id": "alonso",
+      "code": "ALO",
+      "name": "Fernando Alonso",
+      "constructor_id": "aston_martin",
+      "team": "Aston Martin",
+      "grid": 22,
+      "pitlane_start": false,
+      "p_win": 0.0026,
+      "p_podium": 0.0131,
+      "p_points": 0.1897,
+      "p_dnf": 0.2769,
+      "actual": {
+        "position": 19,
+        "position_text": "R",
+        "status": "Retired",
+        "status_class": "dnf"
+      }
+    }
+  ]
+}

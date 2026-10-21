@@ -1,0 +1,5 @@
+# What the Streamlit app needs. It only reads data/published, so no LightGBM or scikit-learn.
+# Streamlit Community Cloud uses this file (it looks next to the app before the repo root).
+pandas==2.3.3
+plotly==7.1.0
+streamlit==1.64.0

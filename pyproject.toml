@@ -52,8 +52,9 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "D1"]
 ignore = ["D105", "D107"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["f1predict"]
+known-first-party = ["f1predict", "charts", "published"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["app"]
 addopts = "--disable-socket -ra"
