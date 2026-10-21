@@ -47,7 +47,7 @@ RACE_COLUMNS = [
     "grid",
     "pitlane_start",
 ]
-CHANCE_COLUMNS = [f"p_{outcome}" for outcome in config.OUTCOMES]
+CHANCE_COLUMNS = [*(f"p_{outcome}" for outcome in config.OUTCOMES), "p_dnf"]
 
 
 class PredictionError(ValueError):
@@ -85,11 +85,15 @@ def completed_races(features: pd.DataFrame, seasons: Iterable[int]) -> list[int]
 
 
 def check_prediction(predicted: pd.DataFrame, race: pd.DataFrame, label: str) -> None:
-    """Make sure a prediction can be scored: every entrant once, ranks 1..n, chances in [0, 1]."""
+    """Make sure a prediction can be scored: every entrant once, ranks 1..n, chances in [0, 1].
+
+    The rank check applies to models that predict an order; a DNF model on its own only
+    gives ``p_dnf``.
+    """
     expected = sorted(race[KEYS].itertuples(index=False, name=None))
     if sorted(predicted[KEYS].itertuples(index=False, name=None)) != expected:
         raise PredictionError(f"{label}: the prediction needs exactly one row per entrant")
-    if sorted(predicted["pred_rank"]) != list(range(1, len(race) + 1)):
+    if "pred_rank" in predicted and sorted(predicted["pred_rank"]) != list(range(1, len(race) + 1)):
         raise PredictionError(f"{label}: pred_rank must use each of 1..{len(race)} once")
     for column in CHANCE_COLUMNS:
         if column in predicted and not predicted[column].between(0, 1).all():

@@ -35,6 +35,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from f1predict.data.fetch import PracticeSummary, SeasonSummary
+    from f1predict.evaluate.dnf import DNFComparison
+    from f1predict.models.dnf import DNFModel
     from f1predict.models.ranker import RankerModel
 
 # ---------------------------------------------------------------------------
@@ -206,10 +208,19 @@ def backtest_command(
             "Default: 2024 (validation), 2025 and 2026 (test).",
         ),
     ] = None,
+    dnf: Annotated[
+        bool,
+        typer.Option(
+            "--dnf/--no-dnf",
+            help="Ranker only: let cars retire in the simulated races, using the DNF model "
+            "chosen on 2024. --no-dnf simulates every car to the finish.",
+        ),
+    ] = True,
 ) -> None:
     """Predict every race of the chosen seasons using only earlier races, and score it.
 
     Prints season averages with 95% confidence intervals and saves the per-race results.
+    For the ranker it first compares the three DNF models and picks one on 2024.
     """
     from dataclasses import replace
 
@@ -221,8 +232,10 @@ def backtest_command(
         save_backtest,
         score_predictions,
     )
+    from f1predict.evaluate.dnf import save_dnf_comparison
     from f1predict.evaluate.metrics import compare
     from f1predict.models import make_model, run_name
+    from f1predict.models.dnf import make_dnf_model
 
     setup_logging(log_file=config.LOG_DIR / "backtest.log")
     chosen = sorted(set(seasons or [config.VALIDATION_SEASON, *config.TEST_SEASONS]))
@@ -232,12 +245,20 @@ def backtest_command(
         console.print(f"[bold red]No completed races to backtest in {chosen}.[/bold red]")
         raise typer.Exit(code=1)
 
-    name = run_name(model, feature_set)
+    name = run_name(model, feature_set, dnf)
     temperature = _validation_temperature(features, feature_set) if model == "ranker" else None
+    make_dnf = None
+    if model == "ranker" and dnf:
+        comparison, kind, window = _choose_dnf(features, chosen)
+        console.print(f"Saved the DNF comparison to {save_dnf_comparison(comparison)}")
+        make_dnf = partial(make_dnf_model, kind, window)
     try:
         with _race_progress(total, name) as progress:
             predictions = predict_races(
-                partial(make_model, model, feature_set, temperature), features, chosen, progress
+                partial(make_model, model, feature_set, temperature, make_dnf),
+                features,
+                chosen,
+                progress,
             )
         result = score_predictions(predictions)
         if model != "baseline":
@@ -251,7 +272,8 @@ def backtest_command(
     _print_season_table(result.summary, f"Backtest: {name}")
     console.print(
         "Season averages over races, with 95% bootstrap confidence intervals below.\n"
-        "MAE and Spearman compare the order of the cars that finished."
+        "MAE and Spearman compare the order of the cars that finished; DNF chances are "
+        "scored over the cars that started."
     )
     if result.comparison is not None:
         _print_season_table(
@@ -302,10 +324,14 @@ def tune(feature_set: FeatureSetOption = "full") -> None:
 
 @app.command()
 def train(feature_set: FeatureSetOption = "full") -> None:
-    """Train the ranker on every completed race and save it, with its temperature, in models/."""
+    """Train the ranker and the DNF model on every completed race and save them in models/.
+
+    The simulation temperature and the DNF model are chosen on 2024 first.
+    """
     from f1predict.models import run_name
+    from f1predict.models.dnf import make_dnf_model, starters
     from f1predict.models.ranker import RankerModel, training_rows
-    from f1predict.models.store import save_ranker
+    from f1predict.models.store import save_dnf_model, save_ranker
 
     setup_logging(log_file=config.LOG_DIR / "train.log")
     features = _load_features_or_exit()
@@ -316,19 +342,30 @@ def train(feature_set: FeatureSetOption = "full") -> None:
         raise typer.Exit(code=1)
 
     temperature = _validation_temperature(features, feature_set)
+    _, kind, window = _choose_dnf(features, [config.VALIDATION_SEASON])
     started = time.perf_counter()
     model = RankerModel(feature_set=feature_set).fit(history)
     seconds = time.perf_counter() - started
+    dnf_model = make_dnf_model(kind, window).fit(history)
     first, last = rows.iloc[0], rows.iloc[-1]
-    trained_on = {
-        "races": int(rows["race_seq"].nunique()),
-        "finishers": len(rows),
+    span = {
         "first_race": f"{first['season']} round {first['round']}",
         "last_race": f"{last['season']} round {last['round']}",
     }
+    trained_on = {"races": int(rows["race_seq"].nunique()), "finishers": len(rows), **span}
+    started_rows = starters(history)
+    dnf_trained_on = {
+        "races": int(started_rows["race_seq"].nunique()),
+        "starters": len(started_rows),
+        "dnfs": int(started_rows["status_class"].eq("dnf").sum()),
+        **span,
+    }
     path = save_ranker(model, run_name("ranker", feature_set), trained_on, temperature=temperature)
+    dnf_path = save_dnf_model(dnf_model, dnf_trained_on)
     _print_training(model, trained_on, seconds, temperature)
-    console.print(f"Saved the model to {path} (description: {path.with_suffix('.json').name})")
+    _print_dnf_training(dnf_model, dnf_trained_on)
+    console.print(f"Saved the ranker to {path} (description: {path.with_suffix('.json').name})")
+    console.print(f"Saved the DNF model to {dnf_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -400,6 +437,36 @@ def _validation_temperature(features: pd.DataFrame, feature_set: str) -> float:
         "scored by a ranker trained only on earlier races."
     )
     return temperature
+
+
+def _choose_dnf(
+    features: pd.DataFrame, seasons: list[int]
+) -> tuple[DNFComparison, str, int | None]:
+    """Choose the DNF window and model on the validation season, comparing all three models.
+
+    The models are backtested over ``seasons`` plus the validation season (the choice is
+    made there) and the comparison is printed. Returns it with the chosen kind and window.
+    """
+    from f1predict.evaluate.backtest import completed_races
+    from f1predict.evaluate.dnf import compare_dnf_models
+    from f1predict.evaluate.tuning import choose_dnf_kind, validation_dnf_window
+    from f1predict.models.dnf import DNF_KINDS, WINDOWS
+
+    season = config.VALIDATION_SEASON
+    races = len(completed_races(features, [season]))
+    if not races:
+        console.print(f"[bold red]No completed {season} races to choose a DNF model on.[/bold red]")
+        raise typer.Exit(code=1)
+    with _race_progress(len(WINDOWS) * races, f"DNF window on {season}") as progress:
+        window, windows = validation_dnf_window(features, season, progress=progress)
+    compared = sorted({*seasons, season})
+    total = len(DNF_KINDS) * len(completed_races(features, compared))
+    with _race_progress(total, "DNF models") as progress:
+        comparison = compare_dnf_models(features, compared, window, progress)
+    kind = choose_dnf_kind(comparison.summary, season)
+    _print_dnf_window(windows, window, season)
+    _print_dnf_comparison(comparison, kind, window)
+    return comparison, kind, window
 
 
 def _load_features_or_exit() -> pd.DataFrame:
@@ -521,6 +588,105 @@ def _print_tuning(table: pd.DataFrame, chosen: dict, current: dict, season: int)
             f"[yellow]The ranker uses {_settings_text(current)}; "
             "update it to the choice above.[/yellow]"
         )
+
+
+def _print_dnf_window(windows: pd.DataFrame, chosen: int | None, season: int) -> None:
+    """The base rate's validation score for every look-back window, marking the choice."""
+    from f1predict.models.dnf import window_label
+
+    view = Table(title=f"Field-wide DNF rate: look-back window on {season}")
+    for column in ("Look back over", "Brier", "Log loss"):
+        view.add_column(column, justify="right")
+    for row in windows.itertuples():
+        is_chosen = row.window == chosen
+        view.add_row(
+            window_label(row.window) + ("*" if is_chosen else ""),
+            f"{row.brier_dnf:.4f}",
+            f"{row.log_loss_dnf:.4f}",
+            style="bold" if is_chosen else "",
+        )
+    console.print(view)
+    console.print(f"* Lowest mean Brier score on {season}: {window_label(chosen)}.")
+
+
+def _print_dnf_comparison(comparison: DNFComparison, chosen: str, window: int | None) -> None:
+    """The three DNF models per season, then each learned model minus the base rate."""
+    from f1predict.evaluate.metrics import AUC_METRIC, METRICS
+    from f1predict.models.dnf import DNF_KINDS, KIND_LABELS, SHORT_LABELS, window_label
+
+    specs = {"brier_dnf": METRICS["brier_dnf"], "log_loss_dnf": METRICS["log_loss_dnf"]}
+    tables = (
+        ("DNF models, cars that started", comparison.summary, specs | {"auc_dnf": AUC_METRIC}),
+        ("DNF models minus the base rate", comparison.differences, specs),
+    )
+    for title, summary, metrics in tables:
+        if summary.empty:
+            continue
+        signed = "difference" in summary
+        seasons = sorted(summary["season"].unique())
+        view = Table(title=title)
+        view.add_column("Metric")
+        view.add_column("Model")
+        for season in seasons:
+            view.add_column(_season_label(season), justify="right")
+        for metric, spec in metrics.items():
+            fmt = spec.fmt.replace("{:", "{:+") if signed else spec.fmt
+            kinds = [kind for kind in DNF_KINDS if kind in set(summary["model"])]
+            for i, kind in enumerate(kinds):
+                rows = summary[(summary["metric"] == metric) & (summary["model"] == kind)]
+                rows = rows.set_index("season")
+                cells: list[Text | str] = []
+                for season in seasons:
+                    if season not in rows.index:
+                        cells.append("-")
+                        continue
+                    row = rows.loc[season]
+                    value = row["difference"] if signed else row["value"]
+                    style = _verdict_style(spec.better, row["low"], row["high"]) if signed else ""
+                    cells.append(_with_ci(fmt, value, row["low"], row["high"], style))
+                label = SHORT_LABELS[kind] + ("*" if kind == chosen else "")
+                view.add_row(spec.label if i == 0 else "", label, *cells)
+            view.add_section()
+        console.print(view)
+    console.print(
+        "ROC AUC: the chance a retiree was given a higher DNF chance than a finisher "
+        "(0.5 = a coin toss).\nThe base rate gives every car in a race the same chance, so "
+        "its AUC only reflects race-to-race changes.\n"
+        f"* Chosen on {config.VALIDATION_SEASON} (lowest mean Brier score): "
+        f"{KIND_LABELS[chosen]}, field-wide rate over the {window_label(window)}."
+    )
+
+
+def _print_dnf_training(model: DNFModel, trained_on: dict) -> None:
+    """What the saved DNF model learned from, and what it leans on."""
+    from f1predict.models.dnf import KIND_LABELS, LightGBMDNF, LogisticDNF, window_label
+
+    span = f"{trained_on['first_race']} to {trained_on['last_race']}"
+    share = trained_on["dnfs"] / trained_on["starters"]
+    summary = Table(title="Trained DNF model", show_header=False)
+    summary.add_column("Setting", style="bold")
+    summary.add_column("Value")
+    summary.add_row("Model", KIND_LABELS[model.kind])
+    summary.add_row("Field-wide rate", f"over the {window_label(model.window)}")
+    summary.add_row("Races", f"{trained_on['races']} ({span})")
+    summary.add_row(
+        "Starters", f"{trained_on['starters']} ({trained_on['dnfs']} DNFs, {share:.1%})"
+    )
+    console.print(summary)
+    if isinstance(model, LogisticDNF):
+        view = Table(title="Coefficients (log-odds of a DNF per standard deviation)")
+        view.add_column("Input")
+        view.add_column("Coefficient", justify="right")
+        for row in model.coefficients().itertuples():
+            view.add_row(row.feature, f"{row.coef:+.3f}")
+        console.print(view)
+    elif isinstance(model, LightGBMDNF):
+        view = Table(title="What the trees lean on (share of total gain)")
+        view.add_column("Input")
+        view.add_column("Share", justify="right")
+        for row in model.importance().itertuples():
+            view.add_row(row.feature, f"{row.gain_share:.1%}")
+        console.print(view)
 
 
 def _settings_text(settings: dict) -> str:

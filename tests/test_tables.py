@@ -149,6 +149,26 @@ def test_old_wording_from_2018(jolpica_races) -> None:
     assert results.loc[results["status"] == "+1 Lap", "status_class"].item() == "finished"
 
 
+def test_a_withdrawn_car_that_raced_is_a_dnf() -> None:
+    """Magnussen 2020 round 14: "Withdrew" after 55 laps and classified 17th, so a DNF."""
+    entry = {
+        "number": "20",
+        "position": "17",
+        "positionText": "17",
+        "points": "0",
+        "Driver": {"driverId": "kevin_magnussen", "code": "MAG"},
+        "Constructor": {"constructorId": "haas"},
+        "grid": "13",
+        "laps": "55",
+        "status": "Withdrew",
+    }
+    not_started = {**entry, "number": "47", "Driver": {"driverId": "x"}, "laps": "0"}
+    race = {"season": "2020", "round": "14", "Results": [entry, not_started]}
+    results = results_table([race])
+    assert results["status_class"].tolist() == ["dnf", "dns"]
+    assert results["laps"].tolist() == [55, 0]
+
+
 def test_sprint_results_share_the_results_columns(jolpica_races) -> None:
     """Sprint rows parse with the same columns; a last-lap retiree keeps P14."""
     sprint = results_table(jolpica_races("sprint_2026_17.json"), "SprintResults")

@@ -18,7 +18,11 @@ chance to **win**, finish on the **podium**, score **points** (top 10), and **re
    many of the old patterns.
 3. **Model**: a LightGBM ranker scores every driver, and a Plackett-Luce simulation turns those
    scores into probabilities over 100,000 simulated races. A separate DNF model decides who
-   retires in each simulated race.
+   retires in each simulated race: a logistic regression on the grid slot, qualifying gap,
+   driver, team and circuit retirement rates and the field's recent retirement rate, chosen
+   over LightGBM and a plain base rate on the 2024 season. A DNF is any start that doesn't
+   reach the chequered flag (lapped cars count as finishers); cars that didn't start or were
+   disqualified are left out of its training data.
 4. **Evaluation**: a race-by-race backtest (each race is predicted using only earlier races)
    against a simple baseline: "everyone finishes where they started".
 

@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import itertools
 import math
+from functools import partial
 
 import numpy as np
+import pandas as pd
 import pytest
 from synthetic import feature_rows, learnable_features, make_tables
 from typer.testing import CliRunner
@@ -19,8 +21,9 @@ from f1predict import config
 from f1predict.__main__ import app
 from f1predict.evaluate import tuning
 from f1predict.evaluate.backtest import predict_races
-from f1predict.features.build import build_features, save_features
+from f1predict.features.build import build_features, load_features, save_features
 from f1predict.models import make_model
+from f1predict.models.dnf import BaseRateDNF, LogisticDNF, make_dnf_model
 from f1predict.models.ranker import RankerModel
 from f1predict.models.simulate import (
     SimulationModel,
@@ -30,7 +33,7 @@ from f1predict.models.simulate import (
     outcome_chances,
     position_probabilities,
 )
-from f1predict.models.store import load_ranker
+from f1predict.models.store import load_dnf_model, load_ranker
 
 runner = CliRunner()
 SCORES = np.array([1.2, 0.3, -0.5, 0.9])
@@ -134,6 +137,54 @@ def test_the_same_seed_gives_the_same_answer_whatever_the_batch_size() -> None:
     assert np.abs(one_go - other_seed).max() < 0.02
 
 
+def test_zero_dnf_chances_reproduce_the_simulation_without_retirements() -> None:
+    """Retirements use their own random stream, so all-zero DNF chances change nothing."""
+    without = position_probabilities(SCORES, 0.7, sims=30_000, seed=3, batch=4_096)
+    zeros = position_probabilities(SCORES, 0.7, sims=30_000, seed=3, batch=4_096, p_dnf=[0] * 4)
+    assert np.array_equal(without, zeros)
+
+
+def test_a_car_that_always_retires_never_wins() -> None:
+    """The favourite at 100% DNF is always classified behind the three finishers."""
+    positions = position_probabilities(SCORES, 1.0, sims=20_000, p_dnf=[1.0, 0, 0, 0])
+    assert positions[0, -1] == 1.0
+    chances = outcome_chances(positions)
+    assert chances["p_win"][0] == 0
+    assert chances["p_podium"][0] == 0
+
+
+def test_a_coin_flip_retirement_halves_the_favourites_win_chance() -> None:
+    """Retiring half the time, the favourite wins half as often; the others share the rest."""
+    plain = position_probabilities(SCORES, 1.0, sims=200_000, seed=4)
+    fragile = position_probabilities(SCORES, 1.0, sims=200_000, seed=4, p_dnf=[0.5, 0, 0, 0])
+    assert fragile[0, 0] == pytest.approx(plain[0, 0] / 2, abs=0.005)
+    assert fragile[1:, 0].sum() == pytest.approx(1 - plain[0, 0] / 2, abs=0.005)
+
+
+def test_chances_still_add_up_and_nest_with_retirements() -> None:
+    """22 cars with DNF chances from 2% to 40%: still 1 winner, 3 podium and 10 points places."""
+    rng = np.random.default_rng(1)
+    positions = position_probabilities(
+        rng.normal(0, 1, 22), 0.8, sims=50_000, p_dnf=rng.uniform(0.02, 0.4, 22)
+    )
+    assert positions.sum(axis=1) == pytest.approx(np.ones(22))
+    assert positions.sum(axis=0) == pytest.approx(np.ones(22))
+    chances = outcome_chances(positions)
+    assert chances["p_win"].sum() == pytest.approx(1)
+    assert chances["p_podium"].sum() == pytest.approx(3)
+    assert chances["p_points"].sum() == pytest.approx(10)
+    assert (chances["p_win"] <= chances["p_podium"]).all()
+    assert (chances["p_podium"] <= chances["p_points"]).all()
+
+
+def test_retirements_are_the_same_whatever_the_batch_size() -> None:
+    """Both random streams are drawn in the same order, batched or not."""
+    p_dnf = [0.1, 0.3, 0.2, 0.05]
+    one_go = position_probabilities(SCORES, 1.0, sims=30_000, seed=7, batch=30_000, p_dnf=p_dnf)
+    batched = position_probabilities(SCORES, 1.0, sims=30_000, seed=7, batch=4_096, p_dnf=p_dnf)
+    assert np.array_equal(one_go, batched)
+
+
 def test_a_higher_temperature_flattens_the_chances() -> None:
     """The favourite's win chance falls as T rises, toward 1 in 4 for four cars."""
     favourite = [
@@ -197,6 +248,30 @@ def test_make_model_adds_the_simulation_only_with_a_temperature() -> None:
     assert isinstance(model, SimulationModel)
     assert model.temperature == 0.9
     assert model.ranker.feature_set == "no_practice"
+    assert model.dnf is None
+    with_dnf = make_model("ranker", temperature=0.9, dnf=partial(make_dnf_model, "logistic", 5))
+    assert isinstance(with_dnf.dnf, LogisticDNF)
+    assert with_dnf.dnf.window == 5
+    with pytest.raises(ValueError, match="temperature"):
+        make_model("ranker", dnf=partial(make_dnf_model, "logistic"))
+
+
+def test_the_simulation_model_adds_retirements_from_its_dnf_model() -> None:
+    """Raw p_dnf per car next to chances that still add up; nobody beats their finish chance."""
+    frame = learnable_features()
+    history = frame[frame["season"] == 2020]
+    model = SimulationModel(RankerModel(), 1.0, 20_000, dnf=BaseRateDNF(window=None)).fit(history)
+    out = model.predict(feature_rows(frame, 30))
+    assert out["p_dnf"].unique() == pytest.approx([0.1])
+    assert out["p_win"].sum() == pytest.approx(1)
+    assert out["p_points"].sum() == pytest.approx(10)
+    assert out["p_win"].max() <= 0.9
+    plain = (
+        SimulationModel(RankerModel(), 1.0, 20_000).fit(history).predict(feature_rows(frame, 30))
+    )
+    favourite = plain["p_win"].idxmax()
+    assert out.loc[favourite, "p_win"] < plain.loc[favourite, "p_win"]
+    assert "p_dnf" not in plain
 
 
 def test_the_simulation_model_predicts_one_race_at_a_time() -> None:
@@ -231,16 +306,44 @@ def workspace(tmp_path, monkeypatch):
 
 
 def test_backtest_command_fits_t_and_scores_the_chances(workspace) -> None:
-    """``backtest --model ranker`` fits T on 2024 and compares chances with the baseline."""
+    """``backtest --model ranker`` fits T, picks a DNF model on 2024, and scores both."""
     result = runner.invoke(app, ["backtest", "--model", "ranker", "--season", "2024"])
     assert result.exit_code == 0, result.output
     assert "Temperature T =" in result.output
+    assert "DNF models, cars that started" in result.output
+    assert "Chosen on 2024" in result.output
     assert "Brier: win" in result.output
+    assert "Brier: DNF" in result.output
+    saved = pd.read_parquet(
+        workspace / "processed" / "backtest" / "ranker_full" / "predictions.parquet"
+    )
+    assert saved["p_dnf"].between(0, 1).all()
+    assert (workspace / "processed" / "backtest" / "dnf" / "summary.csv").exists()
 
 
-def test_train_command_saves_the_temperature(workspace) -> None:
-    """The model's description file carries the temperature to use with its scores."""
+def test_no_dnf_reproduces_the_simulation_without_retirements(workspace) -> None:
+    """``--no-dnf`` skips the DNF models and gives exactly the Phase 7 chances."""
+    result = runner.invoke(app, ["backtest", "--model", "ranker", "--season", "2024", "--no-dnf"])
+    assert result.exit_code == 0, result.output
+    assert "DNF models" not in result.output
+    folder = workspace / "processed" / "backtest" / "ranker_full_no_dnf"
+    saved = pd.read_parquet(folder / "predictions.parquet")
+    assert "p_dnf" not in saved
+
+    features = load_features()
+    temperature = tuning.validation_temperature(features)
+    expected = predict_races(partial(make_model, "ranker", "full", temperature), features, [2024])
+    columns = ["driver_id", "score", "pred_rank", "p_win", "p_podium", "p_points"]
+    pd.testing.assert_frame_equal(saved[columns], expected[columns])
+
+
+def test_train_command_saves_the_temperature_and_the_dnf_model(workspace) -> None:
+    """The ranker's description carries T; the chosen DNF model is saved next to it."""
     result = runner.invoke(app, ["train"])
     assert result.exit_code == 0, result.output
+    assert "Trained DNF model" in result.output
     _, description = load_ranker("ranker_full", workspace / "models")
     assert description["temperature"] > 0
+    model, dnf_description = load_dnf_model(workspace / "models")
+    assert dnf_description["kind"] == model.kind
+    assert dnf_description["trained_on"]["starters"] > dnf_description["trained_on"]["dnfs"] > 0

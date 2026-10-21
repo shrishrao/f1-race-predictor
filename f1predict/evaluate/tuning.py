@@ -15,6 +15,11 @@ out-of-sample scores: each 2024 race is scored by a ranker trained only on earli
 Scores from a ranker that had already seen those races would look too sure of themselves
 and give a temperature that's too low.
 
+The DNF model is chosen the same way, in two steps: ``validation_dnf_window`` picks how many
+recent races the field-wide DNF rate looks back over (the base rate's lowest mean Brier
+score on 2024), and ``choose_dnf_kind`` picks the model (base rate, logistic regression or
+LightGBM) with the lowest mean Brier score on 2024.
+
 The 2025 and 2026 test seasons are never touched, so their results stay an honest measure
 of races the settings weren't chosen on.
 """
@@ -31,7 +36,8 @@ import pandas as pd
 
 from f1predict import config
 from f1predict.evaluate.backtest import predict_races
-from f1predict.evaluate.metrics import race_metrics
+from f1predict.evaluate.metrics import dnf_race_metrics, race_metrics
+from f1predict.models.dnf import WINDOWS, BaseRateDNF
 from f1predict.models.ranker import RankerModel
 from f1predict.models.simulate import finishing_orders, fit_temperature
 
@@ -122,3 +128,44 @@ def validation_temperature(
     make_model = partial(RankerModel, feature_set=feature_set)
     predictions = predict_races(make_model, features, [season], progress)
     return fit_temperature(finishing_orders(predictions))
+
+
+# ---------------------------------------------------------------------------
+# The DNF model
+# ---------------------------------------------------------------------------
+
+
+def validation_dnf_window(
+    features: pd.DataFrame,
+    season: int = config.VALIDATION_SEASON,
+    windows: tuple[int | None, ...] = WINDOWS,
+    progress: Callable[[str], None] | None = None,
+) -> tuple[int | None, pd.DataFrame]:
+    """Choose how many recent races the field-wide DNF rate looks back over.
+
+    Backtests the base rate with every window in ``windows`` (None: all earlier races) on
+    ``season`` and returns the one with the lowest mean Brier score, plus a table of every
+    window's mean Brier score and log loss.
+    """
+    _refuse_test_season(season)
+    rows = []
+    for window in windows:
+        make_model = partial(BaseRateDNF, window=window)
+        races = dnf_race_metrics(predict_races(make_model, features, [season], progress))
+        rows.append(races[["brier_dnf", "log_loss_dnf"]].mean().to_dict())
+    table = pd.DataFrame(rows)
+    table.insert(0, "window", pd.Series(windows, dtype="object"))
+    return windows[int(np.argmin(table["brier_dnf"]))], table
+
+
+def choose_dnf_kind(summary: pd.DataFrame, season: int = config.VALIDATION_SEASON) -> str:
+    """The DNF model with the lowest mean Brier score on ``season``.
+
+    ``summary`` is a DNF comparison's season summary (a ``model`` column, one row per
+    model, season and metric).
+    """
+    _refuse_test_season(season)
+    rows = summary[(summary["season"] == season) & (summary["metric"] == "brier_dnf")]
+    if rows.empty:
+        raise ValueError(f"No {season} DNF results to choose a model on.")
+    return str(rows.loc[rows["value"].idxmin(), "model"])

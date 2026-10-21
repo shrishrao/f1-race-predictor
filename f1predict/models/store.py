@@ -1,10 +1,15 @@
-"""Save and load trained rankers: LightGBM's own text format plus a JSON description.
+"""Save and load trained models: LightGBM's own text format plus a JSON description.
 
 The ``.txt`` file holds the trees. The ``.json`` file next to it records how the model was
 built: feature set and feature names, settings, the races it learned from, the simulation
-temperature, and library versions. Loading checks that the two agree. Nothing here uses
-pickle, which can run any code hidden in a file when it's loaded; these files are only
-ever read as data.
+temperature, and library versions. Loading checks that the two agree.
+
+The DNF model is saved as ``dnf.json`` (plus ``dnf.txt`` when it's LightGBM): its kind, the
+starts and retirements per race it learned from (for the field-wide DNF rate before the next
+race), and, for logistic regression, its fill values, scaling and coefficients as numbers.
+
+Nothing here uses pickle, which can run any code hidden in a file when it's loaded; these
+files are only ever read as data.
 """
 
 from __future__ import annotations
@@ -14,11 +19,15 @@ from pathlib import Path
 from typing import Any
 
 import lightgbm as lgb
+import pandas as pd
 
 from f1predict import __version__, config
+from f1predict.models.dnf import DNF_KINDS, DNFModel, LightGBMDNF, LogisticDNF, make_dnf_model
 from f1predict.models.ranker import RankerModel
 
 FORMAT_VERSION = 1
+DNF_NAME = "dnf"
+LOGISTIC_PARAMS = ("fill", "mean", "scale", "coef")
 
 
 class ModelFileError(ValueError):
@@ -92,4 +101,71 @@ def load_ranker(name: str, folder: Path | None = None) -> tuple[RankerModel, dic
             "run `python -m f1predict train` again."
         )
     model.booster = booster
+    return model, description
+
+
+# ---------------------------------------------------------------------------
+# The DNF model
+# ---------------------------------------------------------------------------
+
+
+def save_dnf_model(model: DNFModel, trained_on: dict[str, Any], folder: Path | None = None) -> Path:
+    """Write a trained DNF model's description (and LightGBM's trees); return the JSON path.
+
+    A tree file left over from an earlier LightGBM choice is removed, so the folder never
+    holds a ``dnf.txt`` that doesn't belong to ``dnf.json``.
+    """
+    if model.counts is None:
+        raise RuntimeError("Only a trained model can be saved; call fit() first.")
+    text_path, meta_path = model_paths(DNF_NAME, folder)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    description: dict[str, Any] = {
+        "format": FORMAT_VERSION,
+        "f1predict_version": __version__,
+        "kind": model.kind,
+        "window": model.window,
+        "trained_on": trained_on,
+        "race_counts": model.counts.to_dict(orient="list"),
+    }
+    if isinstance(model, LogisticDNF):
+        description |= {"features": model.features, "params": model.params}
+    if isinstance(model, LightGBMDNF):
+        model.booster.save_model(text_path)
+        description |= {
+            "features": model.features,
+            "lightgbm_version": lgb.__version__,
+            "importance": model.importance().to_dict(orient="records"),
+        }
+    else:
+        text_path.unlink(missing_ok=True)
+    meta_path.write_text(json.dumps(description, indent=2) + "\n", encoding="utf-8")
+    return meta_path
+
+
+def load_dnf_model(folder: Path | None = None) -> tuple[DNFModel, dict[str, Any]]:
+    """Load the saved DNF model and its description, checking that they belong together."""
+    text_path, meta_path = model_paths(DNF_NAME, folder)
+    if not meta_path.exists():
+        raise FileNotFoundError(
+            f"No saved DNF model in {meta_path.parent}. Run `python -m f1predict train`."
+        )
+    description = json.loads(meta_path.read_text(encoding="utf-8"))
+    if description.get("format") != FORMAT_VERSION or description.get("kind") not in DNF_KINDS:
+        raise ModelFileError(f"{meta_path} is not a DNF model description written by f1predict")
+    model = make_dnf_model(description["kind"], description["window"])
+    model.counts = pd.DataFrame(description["race_counts"]).astype("int64")
+    if isinstance(model, LogisticDNF):
+        params = description["params"]
+        if any(len(params[key]) != len(description["features"]) for key in LOGISTIC_PARAMS):
+            raise ModelFileError(f"{meta_path}: the coefficients don't match the feature list")
+        model.features, model.params = description["features"], params
+    if isinstance(model, LightGBMDNF):
+        if not text_path.exists():
+            raise FileNotFoundError(
+                f"{meta_path} describes LightGBM trees, but {text_path} is gone"
+            )
+        booster = lgb.Booster(model_file=text_path)
+        if booster.feature_name() != description["features"]:
+            raise ModelFileError(f"{text_path} doesn't use the features its description lists")
+        model.features, model.booster = description["features"], booster
     return model, description

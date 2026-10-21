@@ -7,7 +7,8 @@ sprint weekend per season, a pit-lane start, retirements, a non-starter, and an 
 stand-in, all from a fixed random seed.
 
 ``learnable_features`` builds a features table with one obvious signal, for checking that
-the ranker actually learns.
+the ranker actually learns. ``dnf_features`` does the same for the DNF models: cars that
+start further back retire more often.
 """
 
 from __future__ import annotations
@@ -254,6 +255,57 @@ def learnable_features(races: int = 40, cars: int = 10, seed: int = 0) -> pd.Dat
                     "finished": finished,
                     "finish_rank": float(position[car]) if finished else np.nan,
                     "n_finishers": float(cars - 1),
+                }
+            )
+    frame = pd.DataFrame(rows)
+    for column in FEATURE_COLUMNS:
+        if column not in frame:
+            frame[column] = np.nan
+    return frame
+
+
+def dnf_features(
+    races: int = 60, cars: int = 20, seed: int = 0, jump_at: int | None = None
+) -> pd.DataFrame:
+    """A features table (20 races a season from 2020) where the back of the grid retires more.
+
+    A car's DNF chance rises in a straight line from 5% on pole to 40% in last place; from
+    race ``jump_at`` on (if given) every chance doubles, like a regulation reset. The grid
+    is a random shuffle and the other DNF inputs are pure noise. Finishers finish in grid
+    order. ``true_p_dnf`` holds the chance each car was given, the best any model can do.
+    """
+    rng = np.random.default_rng(seed)
+    rows = []
+    for seq in range(races):
+        grid = rng.permutation(cars) + 1
+        chance = 0.05 + 0.35 * (grid - 1) / (cars - 1)
+        if jump_at is not None and seq >= jump_at:
+            chance = 2 * chance
+        retired = rng.random(cars) < chance
+        finishers = [int(car) for car in np.argsort(grid) if not retired[car]]
+        rank = {car: place for place, car in enumerate(finishers, start=1)}
+        for car in range(cars):
+            rows.append(
+                {
+                    "season": 2020 + seq // 20,
+                    "round": seq % 20 + 1,
+                    "race_seq": seq,
+                    "circuit_id": "monza",
+                    "driver_id": f"d{car}",
+                    "driver_code": f"D{car}",
+                    "team_id": f"t{car // 2}",
+                    "grid": float(grid[car]),
+                    "pitlane_start": 0.0,
+                    "quali_gap_pole_pct": rng.uniform(0, 3),
+                    "drv_dnf_rate": rng.uniform(0.05, 0.3),
+                    "team_dnf_rate": rng.uniform(0.05, 0.3),
+                    "circuit_dnf_rate": rng.uniform(0.05, 0.3),
+                    "true_p_dnf": chance[car],
+                    "position": rank.get(car, len(finishers) + 1),
+                    "status_class": "dnf" if retired[car] else "finished",
+                    "finished": not retired[car],
+                    "finish_rank": float(rank[car]) if car in rank else np.nan,
+                    "n_finishers": float(len(finishers)),
                 }
             )
     frame = pd.DataFrame(rows)

@@ -10,6 +10,11 @@ The Gumbel trick draws a whole order at once: add independent Gumbel noise to ev
 ``score / T`` and sort. That gives exactly the Plackett-Luce odds, and it works on a whole
 batch of simulated races in one NumPy step, with no Python loop over drivers.
 
+Retirements are drawn on top of that: in every simulated race each car retires with its
+own DNF chance, independently of the others, and every retiree is placed behind every car
+that finished. So a car that is quick but fragile wins fewer simulated races than one that
+is just as quick and always finishes.
+
 ``T`` is fitted by maximum likelihood: the value under which the races that actually
 happened (the finishers' order) were most likely, computed exactly rather than simulated.
 """
@@ -25,12 +30,15 @@ import pandas as pd
 from scipy.optimize import minimize_scalar
 
 from f1predict import config
+from f1predict.models.dnf import DNFModel
 from f1predict.models.ranker import RankerModel
 
 logger = logging.getLogger(__name__)
 
 SIM_BATCH = 25_000
 TEMPERATURE_BOUNDS = (0.01, 100.0)
+RETIRED_PENALTY = 1e6
+DNF_STREAM = 1
 
 # ---------------------------------------------------------------------------
 # Simulating races
@@ -43,21 +51,33 @@ def position_probabilities(
     sims: int = config.DEFAULT_SIMS,
     seed: int = config.DEFAULT_SEED,
     batch: int = SIM_BATCH,
+    p_dnf: np.ndarray | None = None,
 ) -> np.ndarray:
     """Chance of each car finishing in each position, from ``sims`` simulated races.
 
     Returns an n x n matrix: row = car (in the order of ``scores``), column = finishing
     position (0 = winner). Every row and every column sums to 1. Races are simulated
     ``batch`` at a time to keep memory small; the batch size doesn't change the result.
+
+    With ``p_dnf`` (one chance per car), each car also retires from each simulated race
+    with its own chance. A retiree's noisy strength drops by ``RETIRED_PENALTY``, far more
+    than any real gap, so retirees end up behind every finisher and keep their order among
+    themselves. Retirements come from a second random stream (``DNF_STREAM``), so the
+    Gumbel draws stay the same: ``p_dnf`` of all zeros gives exactly the result without it.
     """
     strengths = np.asarray(scores, dtype="float64") / temperature
     cars = len(strengths)
     rng = np.random.default_rng(seed)
+    retire = None if p_dnf is None else np.asarray(p_dnf, dtype="float64")
+    dnf_rng = np.random.default_rng([seed, DNF_STREAM])
     counts = np.zeros(cars * cars, dtype="int64")
     done = 0
     while done < sims:
         size = min(batch, sims - done)
         noisy = strengths + rng.gumbel(size=(size, cars))
+        if retire is not None:
+            retired = dnf_rng.random(size=(size, cars)) < retire
+            noisy = noisy - RETIRED_PENALTY * retired
         order = np.argsort(-noisy, axis=1)
         counts += np.bincount((order * cars + np.arange(cars)).ravel(), minlength=cars * cars)
         done += size
@@ -139,23 +159,35 @@ class SimulationModel:
 
     ``temperature`` must come from races the model isn't scored on (the validation season);
     the same seed is used for every race, so any single race's prediction can be repeated
-    on its own.
+    on its own. With a ``dnf`` model, cars also retire in the simulated races; without one,
+    every car finishes (the model as it was before DNFs were added).
     """
 
     ranker: RankerModel
     temperature: float
     sims: int = config.DEFAULT_SIMS
     seed: int = config.DEFAULT_SEED
+    dnf: DNFModel | None = None
 
     def fit(self, history: pd.DataFrame) -> SimulationModel:
-        """Train the ranker on earlier races; the temperature stays as given."""
+        """Train the ranker (and the DNF model) on earlier races; the temperature stays."""
         self.ranker.fit(history)
+        if self.dnf is not None:
+            self.dnf.fit(history)
         return self
 
     def predict(self, race: pd.DataFrame) -> pd.DataFrame:
-        """The ranker's order and scores, plus win, podium and points chances."""
+        """The ranker's order and scores, plus win, podium and points chances.
+
+        With a DNF model, also each car's raw ``p_dnf``: its chance of retiring.
+        """
         out = self.ranker.predict(race)
+        p_dnf = None
+        if self.dnf is not None:
+            chances = self.dnf.predict(race).set_index("driver_id")["p_dnf"]
+            p_dnf = chances.reindex(out["driver_id"]).to_numpy("float64")
+            out["p_dnf"] = p_dnf
         positions = position_probabilities(
-            out["score"].to_numpy(), self.temperature, self.sims, self.seed
+            out["score"].to_numpy(), self.temperature, self.sims, self.seed, p_dnf=p_dnf
         )
         return out.assign(**outcome_chances(positions))

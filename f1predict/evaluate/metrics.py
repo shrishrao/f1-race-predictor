@@ -14,6 +14,10 @@ The win, podium and points chances are scored over every entrant with:
 - log loss: like Brier, but much harsher on confident misses. Chances are floored at
   1 in 10,000 so that one freak result can't swamp a whole season.
 
+DNF chances get the same two scores, over the cars that started (non-starters and
+disqualified cars are left out, as in the DNF models' training data), plus ROC AUC: how
+well the chances sort retirees above finishers, pooled over a whole season.
+
 A season's value is the average over its races, with a 95% bootstrap confidence interval.
 ``compare`` works on race-by-race differences between two models, so both are always judged
 on the same resampled races (a paired bootstrap).
@@ -25,6 +29,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
+from scipy.stats import rankdata
 
 from f1predict import config
 
@@ -34,6 +39,7 @@ CHANCE_FLOOR = 1e-4
 CALIBRATION_BINS = 10
 SUMMARY_COLUMNS = ["season", "metric", "value", "low", "high", "races"]
 CALIBRATION_COLUMNS = ["season", "outcome", "bin_low", "bin_high", "n", "predicted", "observed"]
+STARTED = ["finished", "dnf"]
 
 
 class Metric(NamedTuple):
@@ -51,7 +57,11 @@ METRICS = {
     "spearman": Metric("Spearman", "higher", "{:.2f}"),
     **{f"brier_{o}": Metric(f"Brier: {o}", "lower", "{:.3f}") for o in config.OUTCOMES},
     **{f"log_loss_{o}": Metric(f"Log loss: {o}", "lower", "{:.3f}") for o in config.OUTCOMES},
+    "brier_dnf": Metric("Brier: DNF", "lower", "{:.3f}"),
+    "log_loss_dnf": Metric("Log loss: DNF", "lower", "{:.3f}"),
 }
+DNF_METRICS = ["brier_dnf", "log_loss_dnf"]
+AUC_METRIC = Metric("ROC AUC: DNF", "higher", "{:.3f}")
 
 # ---------------------------------------------------------------------------
 # Outcomes
@@ -71,6 +81,11 @@ def add_outcomes(predictions: pd.DataFrame) -> pd.DataFrame:
     """A copy of ``predictions`` with boolean ``win``, ``podium`` and ``points`` columns."""
     flags = outcome_flags(predictions)
     return predictions.assign(**{outcome: flags[outcome] for outcome in flags})
+
+
+def started(predictions: pd.DataFrame) -> pd.Series:
+    """Whether each car started the race (finished or retired; not DNS, not DSQ)."""
+    return predictions["status_class"].isin(STARTED)
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +130,23 @@ def score_race(race: pd.DataFrame) -> dict[str, float]:
         chances = race[column].to_numpy("float64") if column in race else None
         scores[f"brier_{outcome}"] = np.nan if chances is None else brier_score(chances, happened)
         scores[f"log_loss_{outcome}"] = np.nan if chances is None else log_loss(chances, happened)
-    return scores
+    return scores | dnf_scores(race)
+
+
+def dnf_scores(race: pd.DataFrame) -> dict[str, float]:
+    """Brier score and log loss of one race's ``p_dnf`` over the cars that started.
+
+    Both are NaN when the model gives no DNF chances.
+    """
+    if "p_dnf" not in race:
+        return dict.fromkeys(DNF_METRICS, np.nan)
+    rows = race[started(race)]
+    chances = rows["p_dnf"].to_numpy("float64")
+    happened = rows["status_class"].eq("dnf").to_numpy("float64")
+    return {
+        "brier_dnf": brier_score(chances, happened),
+        "log_loss_dnf": log_loss(chances, happened),
+    }
 
 
 def race_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
@@ -131,6 +162,88 @@ def race_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
         for (season, round_number), race in predictions.groupby(["season", "round"])
     ]
     return pd.DataFrame(rows, columns=["season", "round", "circuit_id", "entries", *METRICS])
+
+
+def dnf_race_metrics(predictions: pd.DataFrame) -> pd.DataFrame:
+    """Score the DNF chances of every race: one row per race, Brier and log loss over starters.
+
+    For predictions that have ``p_dnf`` but no finishing order (a DNF model on its own).
+    """
+    rows = [
+        {
+            "season": season,
+            "round": round_number,
+            "circuit_id": race["circuit_id"].iloc[0],
+            "starters": int(started(race).sum()),
+            **dnf_scores(race),
+        }
+        for (season, round_number), race in predictions.groupby(["season", "round"])
+    ]
+    return pd.DataFrame(rows, columns=["season", "round", "circuit_id", "starters", *DNF_METRICS])
+
+
+# ---------------------------------------------------------------------------
+# ROC AUC for DNF chances
+# ---------------------------------------------------------------------------
+
+
+def roc_auc(chances: np.ndarray, happened: np.ndarray) -> float:
+    """Chance that a random retiree was given a higher DNF chance than a random finisher.
+
+    Ties count as half. 0.5 is a coin toss; 1.0 means every retiree was ranked above every
+    finisher. It's the Mann-Whitney U statistic scaled to 0-1, the same number scikit-learn's
+    ``roc_auc_score`` gives. NaN if nobody (or everybody) retired.
+    """
+    retired = np.asarray(happened, dtype=bool)
+    n_retired = retired.sum()
+    n_finished = len(retired) - n_retired
+    if n_retired == 0 or n_finished == 0:
+        return np.nan
+    ranks = rankdata(chances)
+    return float(
+        (ranks[retired].sum() - n_retired * (n_retired + 1) / 2) / (n_retired * n_finished)
+    )
+
+
+def season_auc(
+    predictions: pd.DataFrame,
+    samples: int = BOOTSTRAP_SAMPLES,
+    seed: int = config.DEFAULT_SEED,
+    confidence: float = CONFIDENCE,
+) -> pd.DataFrame:
+    """ROC AUC of ``p_dnf`` per season, pooled over every starter, with a 95% bootstrap CI.
+
+    AUC compares cars across the whole season rather than within one race (a race has only
+    a couple of retirements), so it is computed on all of a season's starters at once. The
+    interval resamples whole races, like the other metrics. Returns rows shaped like
+    ``summarize`` (metric ``auc_dnf``).
+    """
+    rows = []
+    tail = (1 - confidence) / 2 * 100
+    for season, group in predictions[started(predictions)].groupby("season"):
+        races = [race for _, race in group.groupby("round")]
+        chances = [race["p_dnf"].to_numpy("float64") for race in races]
+        retired = [race["status_class"].eq("dnf").to_numpy() for race in races]
+        rng = np.random.default_rng(seed)
+        draws = [
+            roc_auc(
+                np.concatenate([chances[i] for i in pick]),
+                np.concatenate([retired[i] for i in pick]),
+            )
+            for pick in rng.integers(0, len(races), size=(samples, len(races)))
+        ]
+        low, high = np.nanpercentile(draws, [tail, 100 - tail])
+        rows.append(
+            {
+                "season": season,
+                "metric": "auc_dnf",
+                "value": roc_auc(np.concatenate(chances), np.concatenate(retired)),
+                "low": low,
+                "high": high,
+                "races": len(races),
+            }
+        )
+    return pd.DataFrame(rows, columns=SUMMARY_COLUMNS)
 
 
 # ---------------------------------------------------------------------------
@@ -221,21 +334,25 @@ def calibration_table(predictions: pd.DataFrame, bins: int = CALIBRATION_BINS) -
     Chances are cut into ``bins`` equal-width bins (0-10%, 10-20%, ...). For each bin with
     drivers in it: how many (``n``), the mean chance they were given (``predicted``) and the
     share for whom it happened (``observed``). In a well-calibrated model the two are close.
+    DNF chances (outcome ``dnf``) are binned over the cars that started.
     """
     flags = outcome_flags(predictions)
+    if "p_dnf" in predictions:
+        flags["dnf"] = predictions["status_class"].eq("dnf")
     tables = []
-    for outcome in config.OUTCOMES:
+    for outcome in [*config.OUTCOMES, "dnf"]:
         column = f"p_{outcome}"
         if column not in predictions:
             continue
-        chance = predictions[column].astype("float64")
+        rows = predictions[started(predictions)] if outcome == "dnf" else predictions
+        chance = rows[column].astype("float64")
         frame = pd.DataFrame(
             {
-                "season": predictions["season"],
+                "season": rows["season"],
                 "outcome": outcome,
                 "bin": np.minimum((chance * bins).astype("int64"), bins - 1),
                 "chance": chance,
-                "happened": flags[outcome].astype("float64"),
+                "happened": flags.loc[rows.index, outcome].astype("float64"),
             }
         )
         tables.append(

@@ -36,6 +36,20 @@ def test_unknown_status_counts_as_dnf() -> None:
 def test_non_starters_are_dns(status: str) -> None:
     """Drivers who never started are DNS, so they can be left out of training targets."""
     assert classify_status(status) is StatusClass.DNS
+    assert classify_status(status, laps=0) is StatusClass.DNS
+
+
+@pytest.mark.parametrize("laps", [1, 47, 55])
+def test_a_withdrawn_car_that_completed_laps_is_a_dnf(laps: int) -> None:
+    """Regression guard: Norris 2019 R18 "Withdrew" after 48 laps; he started, so it's a DNF."""
+    assert classify_status("Withdrew", laps=laps) is StatusClass.DNF
+
+
+def test_laps_never_change_the_other_classes() -> None:
+    """Finishers, retirees and disqualified cars all completed laps; only DNS depends on it."""
+    assert classify_status("Finished", laps=57) is StatusClass.FINISHED
+    assert classify_status("Retired", laps=12) is StatusClass.DNF
+    assert classify_status("Disqualified", laps=57) is StatusClass.DSQ
 
 
 @pytest.mark.parametrize("status", ["Disqualified", "Excluded"])

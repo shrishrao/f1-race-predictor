@@ -190,6 +190,7 @@ def results_table(races: Iterable[dict[str, Any]], results_key: str = "Results")
             driver = entry.get("Driver", {})
             constructor = entry.get("Constructor", {})
             status = entry.get("status", "")
+            laps = _to_int(entry.get("laps"))
             name = f"{driver.get('givenName', '')} {driver.get('familyName', '')}".strip()
             rows.append(
                 {
@@ -205,9 +206,9 @@ def results_table(races: Iterable[dict[str, Any]], results_key: str = "Results")
                     "position": _to_int(entry.get("position")),
                     "position_text": entry.get("positionText"),
                     "points": float(entry.get("points") or 0.0),
-                    "laps": _to_int(entry.get("laps")),
+                    "laps": laps,
                     "status": status,
-                    "status_class": classify_status(status).value,
+                    "status_class": classify_status(status, laps).value,
                     "time_ms": _to_int((entry.get("Time") or {}).get("millis")),
                 }
             )
