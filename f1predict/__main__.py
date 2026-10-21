@@ -235,7 +235,7 @@ def backtest_command(
     from f1predict.evaluate.dnf import save_dnf_comparison
     from f1predict.evaluate.metrics import compare
     from f1predict.models import make_model, run_name
-    from f1predict.models.dnf import make_dnf_model
+    from f1predict.models.dnf import dnf_inputs, make_dnf_model
 
     setup_logging(log_file=config.LOG_DIR / "backtest.log")
     chosen = sorted(set(seasons or [config.VALIDATION_SEASON, *config.TEST_SEASONS]))
@@ -249,9 +249,10 @@ def backtest_command(
     temperature = _validation_temperature(features, feature_set) if model == "ranker" else None
     make_dnf = None
     if model == "ranker" and dnf:
-        comparison, kind, window = _choose_dnf(features, chosen)
-        console.print(f"Saved the DNF comparison to {save_dnf_comparison(comparison)}")
-        make_dnf = partial(make_dnf_model, kind, window)
+        comparison, kind, window = _choose_dnf(features, chosen, feature_set)
+        folder = save_dnf_comparison(comparison, run_name("dnf", feature_set))
+        console.print(f"Saved the DNF comparison to {folder}")
+        make_dnf = partial(make_dnf_model, kind, window, dnf_inputs(feature_set))
     try:
         with _race_progress(total, name) as progress:
             predictions = predict_races(
@@ -329,7 +330,7 @@ def train(feature_set: FeatureSetOption = "full") -> None:
     The simulation temperature and the DNF model are chosen on 2024 first.
     """
     from f1predict.models import run_name
-    from f1predict.models.dnf import make_dnf_model, starters
+    from f1predict.models.dnf import dnf_inputs, make_dnf_model, starters
     from f1predict.models.ranker import RankerModel, training_rows
     from f1predict.models.store import save_dnf_model, save_ranker
 
@@ -342,11 +343,11 @@ def train(feature_set: FeatureSetOption = "full") -> None:
         raise typer.Exit(code=1)
 
     temperature = _validation_temperature(features, feature_set)
-    _, kind, window = _choose_dnf(features, [config.VALIDATION_SEASON])
+    _, kind, window = _choose_dnf(features, [config.VALIDATION_SEASON], feature_set)
     started = time.perf_counter()
     model = RankerModel(feature_set=feature_set).fit(history)
     seconds = time.perf_counter() - started
-    dnf_model = make_dnf_model(kind, window).fit(history)
+    dnf_model = make_dnf_model(kind, window, dnf_inputs(feature_set)).fit(history)
     first, last = rows.iloc[0], rows.iloc[-1]
     span = {
         "first_race": f"{first['season']} round {first['round']}",
@@ -361,11 +362,41 @@ def train(feature_set: FeatureSetOption = "full") -> None:
         **span,
     }
     path = save_ranker(model, run_name("ranker", feature_set), trained_on, temperature=temperature)
-    dnf_path = save_dnf_model(dnf_model, dnf_trained_on)
+    dnf_path = save_dnf_model(dnf_model, run_name("dnf", feature_set), dnf_trained_on)
     _print_training(model, trained_on, seconds, temperature)
     _print_dnf_training(dnf_model, dnf_trained_on)
     console.print(f"Saved the ranker to {path} (description: {path.with_suffix('.json').name})")
     console.print(f"Saved the DNF model to {dnf_path}")
+
+
+@app.command()
+def report() -> None:
+    """Rebuild the README's results tables and plots from saved backtests and models.
+
+    Needs the baseline and ranker backtests and `train` first. Ablation backtests
+    (`--features ...`) and the `--no-dnf` run are included when they've been run.
+    """
+    from f1predict.evaluate.report import write_report
+
+    setup_logging(log_file=config.LOG_DIR / "report.log")
+    try:
+        written, missing = write_report()
+    except (FileNotFoundError, ValueError) as exc:
+        console.print(f"[bold red]Report failed:[/bold red] {exc}")
+        raise typer.Exit(code=1) from exc
+    table = Table(title="Report")
+    table.add_column("File written")
+    table.add_column("Size", justify="right")
+    for path in written:
+        table.add_row(
+            str(path.relative_to(config.REPO_ROOT))
+            if path.is_relative_to(config.REPO_ROOT)
+            else str(path),
+            f"{path.stat().st_size / 1024:.0f} KB",
+        )
+    console.print(table)
+    for command in missing:
+        console.print(f"[yellow]Left out:[/yellow] run `{command}` to include it.")
 
 
 # ---------------------------------------------------------------------------
@@ -440,18 +471,20 @@ def _validation_temperature(features: pd.DataFrame, feature_set: str) -> float:
 
 
 def _choose_dnf(
-    features: pd.DataFrame, seasons: list[int]
+    features: pd.DataFrame, seasons: list[int], feature_set: str = "full"
 ) -> tuple[DNFComparison, str, int | None]:
     """Choose the DNF window and model on the validation season, comparing all three models.
 
-    The models are backtested over ``seasons`` plus the validation season (the choice is
-    made there) and the comparison is printed. Returns it with the chosen kind and window.
+    The learned models use only the DNF inputs allowed by ``feature_set``. They are
+    backtested over ``seasons`` plus the validation season (the choice is made there) and
+    the comparison is printed. Returns it with the chosen kind and window.
     """
     from f1predict.evaluate.backtest import completed_races
     from f1predict.evaluate.dnf import compare_dnf_models
     from f1predict.evaluate.tuning import choose_dnf_kind, validation_dnf_window
-    from f1predict.models.dnf import DNF_KINDS, WINDOWS
+    from f1predict.models.dnf import DNF_KINDS, WINDOWS, dnf_inputs
 
+    inputs = dnf_inputs(feature_set)
     season = config.VALIDATION_SEASON
     races = len(completed_races(features, [season]))
     if not races:
@@ -462,10 +495,11 @@ def _choose_dnf(
     compared = sorted({*seasons, season})
     total = len(DNF_KINDS) * len(completed_races(features, compared))
     with _race_progress(total, "DNF models") as progress:
-        comparison = compare_dnf_models(features, compared, window, progress)
+        comparison = compare_dnf_models(features, compared, window, progress, inputs=inputs)
     kind = choose_dnf_kind(comparison.summary, season)
     _print_dnf_window(windows, window, season)
     _print_dnf_comparison(comparison, kind, window)
+    console.print(f"Inputs of the learned DNF models: {', '.join(inputs)}.")
     return comparison, kind, window
 
 
@@ -507,9 +541,9 @@ def _season_label(season: int) -> str:
 
 def _verdict_style(better: str, low: float, high: float) -> str:
     """Green if a difference's CI is entirely on the good side of 0, red if on the bad side."""
-    improved = low > 0 if better == "higher" else high < 0
-    worsened = high < 0 if better == "higher" else low > 0
-    return "green" if improved else "red" if worsened else ""
+    from f1predict.evaluate.metrics import clear_difference
+
+    return {1: "green", -1: "red", 0: ""}[clear_difference(better, low, high)]
 
 
 def _with_ci(fmt: str, value: float, low: float, high: float, style: str = "") -> Text:

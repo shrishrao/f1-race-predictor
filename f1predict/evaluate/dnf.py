@@ -55,15 +55,19 @@ def compare_dnf_models(
     window: int | None,
     progress: Callable[[str], None] | None = None,
     kinds: Iterable[str] = DNF_KINDS,
+    inputs: list[str] | None = None,
 ) -> DNFComparison:
     """Backtest every DNF model in ``kinds`` over ``seasons`` and score them side by side.
 
-    ``window`` is the look-back for the field-wide DNF rate, shared by every model.
+    ``window`` is the look-back for the field-wide DNF rate, shared by every model;
+    ``inputs`` replaces the learned models' input columns (e.g. for an ablation).
     ``progress`` is called after each race of each model.
     """
     seasons = sorted(seasons)
     runs = {
-        kind: predict_races(partial(make_dnf_model, kind, window), features, seasons, progress)
+        kind: predict_races(
+            partial(make_dnf_model, kind, window, inputs), features, seasons, progress
+        )
         for kind in kinds
     }
     return score_dnf_runs(runs)
@@ -102,13 +106,13 @@ def score_dnf_runs(runs: dict[str, pd.DataFrame]) -> DNFComparison:
 # ---------------------------------------------------------------------------
 
 
-def save_dnf_comparison(comparison: DNFComparison, folder: Path | None = None) -> Path:
-    """Save a DNF comparison under ``backtest/dnf`` and return the folder.
+def save_dnf_comparison(comparison: DNFComparison, name: str, folder: Path | None = None) -> Path:
+    """Save a DNF comparison under ``backtest/<name>`` (e.g. ``dnf_full``); return the folder.
 
     ``predictions.parquet`` (every model's ``p_dnf`` per driver per race), ``races.csv``,
     ``summary.csv`` (season averages and ROC AUC with CIs) and ``vs_base_rate.csv``.
     """
-    target = folder or backtest_dir("dnf")
+    target = folder or backtest_dir(name)
     target.mkdir(parents=True, exist_ok=True)
     comparison.predictions.to_parquet(target / "predictions.parquet", index=False)
     comparison.races.to_csv(target / "races.csv", index=False, float_format="%.6g")

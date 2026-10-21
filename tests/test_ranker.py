@@ -100,13 +100,27 @@ def test_the_same_seed_gives_the_same_scores(frame, trained) -> None:
     assert np.array_equal(trained.predict(race)["score"], again.predict(race)["score"])
 
 
-def test_tied_scores_go_to_the_better_grid_slot(frame) -> None:
-    """Cars with identical features get identical scores; the better grid slot ranks first."""
-    model = RankerModel(feature_set="no_grid_quali").fit(frame[frame["season"] == 2020])
+class FlatBooster:
+    """Stands in for trained trees that give every car the same score."""
+
+    def predict(self, rows: pd.DataFrame, validate_features: bool = True) -> np.ndarray:
+        """A score of 0 for every row."""
+        return np.zeros(len(rows))
+
+
+@pytest.mark.parametrize(
+    ("feature_set", "expected"), [("full", [3, 1, 2]), ("no_grid_quali", [1, 2, 3])]
+)
+def test_tied_scores_use_the_grid_only_if_the_model_may_see_it(
+    frame, feature_set, expected
+) -> None:
+    """Ties go to the better grid slot, unless the grid is hidden (then by driver id)."""
+    model = RankerModel(feature_set=feature_set)
+    model.booster = FlatBooster()
     race = feature_rows(frame, 30).head(3).assign(grid=[3.0, 1.0, 2.0])
+    race = race.assign(driver_id=["d1", "d2", "d3"])
     predicted = model.predict(race).set_index("driver_id")
-    assert predicted["score"].nunique() == 1
-    assert predicted.loc[race["driver_id"], "pred_rank"].tolist() == [3, 1, 2]
+    assert predicted.loc[["d1", "d2", "d3"], "pred_rank"].tolist() == expected
 
 
 def test_importance_finds_the_signal(trained) -> None:

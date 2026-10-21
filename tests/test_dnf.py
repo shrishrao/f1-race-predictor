@@ -34,6 +34,7 @@ from f1predict.models.dnf import (
     BaseRateDNF,
     LightGBMDNF,
     LogisticDNF,
+    dnf_inputs,
     make_dnf_model,
     race_counts,
     rate_before,
@@ -309,7 +310,7 @@ def test_the_comparison_scores_every_model(comparison) -> None:
 
 def test_the_comparison_is_saved(comparison, tmp_path) -> None:
     """Predictions, per-race scores, the summary and the differences from the base rate."""
-    folder = save_dnf_comparison(comparison, tmp_path / "dnf")
+    folder = save_dnf_comparison(comparison, "dnf_full", tmp_path / "dnf")
     assert {path.name for path in folder.iterdir()} == {
         "predictions.parquet",
         "races.csv",
@@ -348,6 +349,7 @@ def test_dnf_choices_are_never_made_on_a_test_season(frame) -> None:
 # Saving and loading
 # ---------------------------------------------------------------------------
 
+NAME = "dnf_full"
 TRAINED_ON = {"races": 40, "starters": 800, "dnfs": 180, "first_race": "x", "last_race": "y"}
 
 
@@ -355,43 +357,67 @@ TRAINED_ON = {"races": 40, "starters": 800, "dnfs": 180, "first_race": "x", "las
 def test_a_loaded_dnf_model_predicts_exactly_like_the_saved_one(frame, tmp_path, kind) -> None:
     """Base rate, logistic regression and LightGBM all survive the round trip unchanged."""
     model = make_dnf_model(kind, window=10).fit(frame[frame["season"] <= 2021])
-    save_dnf_model(model, TRAINED_ON, tmp_path)
-    loaded, description = load_dnf_model(tmp_path)
+    save_dnf_model(model, NAME, TRAINED_ON, tmp_path)
+    loaded, description = load_dnf_model(NAME, tmp_path)
     race = feature_rows(frame, 45)
     assert np.array_equal(model.predict(race)["p_dnf"], loaded.predict(race)["p_dnf"])
     assert (description["kind"], description["window"]) == (kind, 10)
-    assert model_paths("dnf", tmp_path)[0].exists() == (kind == "lightgbm")
+    assert model_paths(NAME, tmp_path)[0].exists() == (kind == "lightgbm")
 
 
 def test_switching_away_from_lightgbm_removes_its_tree_file(frame, tmp_path) -> None:
     """A dnf.txt left over from an earlier LightGBM model would no longer match dnf.json."""
     history = frame[frame["season"] == 2020]
-    save_dnf_model(LightGBMDNF().fit(history), TRAINED_ON, tmp_path)
-    save_dnf_model(BaseRateDNF().fit(history), TRAINED_ON, tmp_path)
-    assert not model_paths("dnf", tmp_path)[0].exists()
+    save_dnf_model(LightGBMDNF().fit(history), NAME, TRAINED_ON, tmp_path)
+    save_dnf_model(BaseRateDNF().fit(history), NAME, TRAINED_ON, tmp_path)
+    assert not model_paths(NAME, tmp_path)[0].exists()
 
 
 def test_a_dnf_file_that_doesnt_match_is_refused(frame, tmp_path) -> None:
     """Coefficients that don't fit the feature list, or an unknown kind, won't load."""
-    save_dnf_model(LogisticDNF().fit(frame[frame["season"] == 2020]), TRAINED_ON, tmp_path)
-    meta_path = model_paths("dnf", tmp_path)[1]
+    save_dnf_model(LogisticDNF().fit(frame[frame["season"] == 2020]), NAME, TRAINED_ON, tmp_path)
+    meta_path = model_paths(NAME, tmp_path)[1]
     description = json.loads(meta_path.read_text(encoding="utf-8"))
 
     meta_path.write_text(json.dumps({**description, "features": ["grid"]}), encoding="utf-8")
     with pytest.raises(ModelFileError, match="coefficients"):
-        load_dnf_model(tmp_path)
+        load_dnf_model(NAME, tmp_path)
 
     meta_path.write_text(json.dumps({**description, "kind": "pickle"}), encoding="utf-8")
     with pytest.raises(ModelFileError, match="not a DNF model"):
-        load_dnf_model(tmp_path)
+        load_dnf_model(NAME, tmp_path)
 
 
 def test_a_missing_dnf_model_says_how_to_make_one(tmp_path) -> None:
     """No files yet: the error names the command that trains the model."""
     with pytest.raises(FileNotFoundError, match="f1predict train"):
-        load_dnf_model(tmp_path)
+        load_dnf_model(NAME, tmp_path)
     with pytest.raises(RuntimeError, match="fit"):
-        save_dnf_model(BaseRateDNF(), TRAINED_ON, tmp_path)
+        save_dnf_model(BaseRateDNF(), NAME, TRAINED_ON, tmp_path)
+
+
+def test_an_ablation_hides_its_feature_groups_from_the_dnf_model_too() -> None:
+    """Without grid and qualifying, the DNF model loses them; practice ablations change nothing."""
+    assert dnf_inputs("full") == DNF_FEATURES
+    assert dnf_inputs("no_practice") == DNF_FEATURES
+    assert dnf_inputs("no_grid_quali") == [
+        FIELD_RATE,
+        "drv_dnf_rate",
+        "team_dnf_rate",
+        "circuit_dnf_rate",
+    ]
+    model = make_dnf_model("logistic", 5, dnf_inputs("no_grid_quali"))
+    assert "grid" not in model.features
+    assert make_dnf_model("base_rate", 5, ["grid"]) == BaseRateDNF(window=5)
+
+
+def test_the_comparison_passes_the_inputs_to_the_learned_models(frame) -> None:
+    """With only the field rate as input, logistic regression can't rank cars within a race."""
+    comparison = compare_dnf_models(
+        frame, [2021], window=10, kinds=["base_rate", "logistic"], inputs=[FIELD_RATE]
+    )
+    logistic = comparison.predictions.query("model == 'logistic'")
+    assert logistic.groupby("round")["p_dnf"].nunique().eq(1).all()
 
 
 def test_every_model_kind_is_known_by_name() -> None:

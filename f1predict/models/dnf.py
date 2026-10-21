@@ -35,6 +35,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from f1predict import config
+from f1predict.features.build import FEATURE_GROUPS, FEATURE_SETS
 from f1predict.models import require_one_race
 
 DNFKind = Literal["base_rate", "logistic", "lightgbm"]
@@ -283,11 +284,34 @@ MODEL_CLASSES: dict[str, type[DNFModel]] = {
 # ---------------------------------------------------------------------------
 
 
-def make_dnf_model(kind: str, window: int | None = DEFAULT_WINDOW) -> DNFModel:
-    """A new, untrained DNF model by its name (``base_rate``, ``logistic`` or ``lightgbm``)."""
+def dnf_inputs(feature_set: str = "full") -> list[str]:
+    """The learned DNF models' inputs that go with one of the ranker's feature sets.
+
+    An ablation leaves feature groups out of the whole model, not just the ranker: with
+    ``no_grid_quali`` the DNF models lose the grid slot, pit-lane start and qualifying gap
+    too. The other sets keep every DNF input (none of them is a practice feature).
+    """
+    left_out = {
+        column
+        for group, columns in FEATURE_GROUPS.items()
+        if group not in FEATURE_SETS[feature_set]
+        for column in columns
+    }
+    return [column for column in DNF_FEATURES if column not in left_out]
+
+
+def make_dnf_model(
+    kind: str, window: int | None = DEFAULT_WINDOW, features: list[str] | None = None
+) -> DNFModel:
+    """A new, untrained DNF model by its name (``base_rate``, ``logistic`` or ``lightgbm``).
+
+    ``features`` replaces the learned models' inputs (the base rate has none).
+    """
     if kind not in MODEL_CLASSES:
         raise ValueError(f"Unknown DNF model {kind!r}; expected one of {DNF_KINDS}")
-    return MODEL_CLASSES[kind](window=window)
+    if kind == BaseRateDNF.kind or features is None:
+        return MODEL_CLASSES[kind](window=window)
+    return MODEL_CLASSES[kind](window=window, features=list(features))
 
 
 def window_label(window: int | None) -> str:

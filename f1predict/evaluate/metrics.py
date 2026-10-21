@@ -323,6 +323,19 @@ def compare(
     return summarize(differences, samples, seed).rename(columns={"value": "difference"})
 
 
+def clear_difference(better: str, low: float, high: float) -> int:
+    """+1 if a difference's CI lies entirely on the good side of 0, -1 if on the bad side.
+
+    ``better`` is the metric's direction (``"higher"`` or ``"lower"``). 0 means the
+    interval includes 0: the races don't settle which model is better.
+    """
+    if (low > 0 and better == "higher") or (high < 0 and better == "lower"):
+        return 1
+    if (high < 0 and better == "higher") or (low > 0 and better == "lower"):
+        return -1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Calibration
 # ---------------------------------------------------------------------------

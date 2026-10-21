@@ -34,6 +34,7 @@ PUBLISHED_DIR = DATA_DIR / "published"
 LOG_DIR = DATA_DIR / "logs"
 MODELS_DIR = _dir_from_env("F1PREDICT_MODELS_DIR", REPO_ROOT / "models")
 DOCS_DIR = REPO_ROOT / "docs"
+README_PATH = REPO_ROOT / "README.md"
 
 # ---------------------------------------------------------------------------
 # Seasons

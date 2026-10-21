@@ -122,8 +122,10 @@ class RankerModel:
         return self
 
     def predict(self, race: pd.DataFrame) -> pd.DataFrame:
-        """Score every car in one race and order them by score (ties go to the better grid slot).
+        """Score every car in one race and order them by score.
 
+        Ties go to the better grid slot when the grid is one of the model's inputs, and
+        otherwise by driver id, so a model that isn't allowed to see the grid never uses it.
         Returns the ids, ``score`` (higher = better; only differences within a race mean
         anything) and ``pred_rank``.
         """
@@ -132,9 +134,10 @@ class RankerModel:
         require_one_race(race)
         out = race[KEYS].copy()
         out["score"] = self.booster.predict(race[self.features], validate_features=True)
+        tie_break = ["grid", "driver_id"] if "grid" in self.features else ["driver_id"]
         order = (
             out.assign(grid=race["grid"])
-            .sort_values(["score", "grid", "driver_id"], ascending=[False, True, True])
+            .sort_values(["score", *tie_break], ascending=[False] + [True] * len(tie_break))
             .index
         )
         out["pred_rank"] = pd.Series(np.arange(1, len(race) + 1), index=order)

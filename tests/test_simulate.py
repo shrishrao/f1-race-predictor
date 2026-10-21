@@ -318,7 +318,7 @@ def test_backtest_command_fits_t_and_scores_the_chances(workspace) -> None:
         workspace / "processed" / "backtest" / "ranker_full" / "predictions.parquet"
     )
     assert saved["p_dnf"].between(0, 1).all()
-    assert (workspace / "processed" / "backtest" / "dnf" / "summary.csv").exists()
+    assert (workspace / "processed" / "backtest" / "dnf_full" / "summary.csv").exists()
 
 
 def test_no_dnf_reproduces_the_simulation_without_retirements(workspace) -> None:
@@ -337,6 +337,19 @@ def test_no_dnf_reproduces_the_simulation_without_retirements(workspace) -> None
     pd.testing.assert_frame_equal(saved[columns], expected[columns])
 
 
+def test_an_ablation_keeps_its_hidden_features_out_of_the_dnf_model(workspace) -> None:
+    """``--features no_grid_quali``: the DNF models get no grid or qualifying inputs either."""
+    result = runner.invoke(
+        app, ["backtest", "--model", "ranker", "--features", "no_grid_quali", "--season", "2024"]
+    )
+    assert result.exit_code == 0, result.output
+    words = " ".join(result.output.split())
+    assert "field_dnf_rate, drv_dnf_rate, team_dnf_rate, circuit_dnf_rate." in words
+    backtest = workspace / "processed" / "backtest"
+    assert (backtest / "ranker_no_grid_quali" / "summary.json").exists()
+    assert (backtest / "dnf_no_grid_quali" / "summary.csv").exists()
+
+
 def test_train_command_saves_the_temperature_and_the_dnf_model(workspace) -> None:
     """The ranker's description carries T; the chosen DNF model is saved next to it."""
     result = runner.invoke(app, ["train"])
@@ -344,6 +357,6 @@ def test_train_command_saves_the_temperature_and_the_dnf_model(workspace) -> Non
     assert "Trained DNF model" in result.output
     _, description = load_ranker("ranker_full", workspace / "models")
     assert description["temperature"] > 0
-    model, dnf_description = load_dnf_model(workspace / "models")
+    model, dnf_description = load_dnf_model("dnf_full", workspace / "models")
     assert dnf_description["kind"] == model.kind
     assert dnf_description["trained_on"]["starters"] > dnf_description["trained_on"]["dnfs"] > 0

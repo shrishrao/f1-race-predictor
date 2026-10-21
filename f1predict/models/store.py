@@ -4,9 +4,10 @@ The ``.txt`` file holds the trees. The ``.json`` file next to it records how the
 built: feature set and feature names, settings, the races it learned from, the simulation
 temperature, and library versions. Loading checks that the two agree.
 
-The DNF model is saved as ``dnf.json`` (plus ``dnf.txt`` when it's LightGBM): its kind, the
-starts and retirements per race it learned from (for the field-wide DNF rate before the next
-race), and, for logistic regression, its fill values, scaling and coefficients as numbers.
+The DNF model that goes with a ranker is saved as ``dnf_<feature set>.json`` (plus a ``.txt``
+when it's LightGBM): its kind, the starts and retirements per race it learned from (for the
+field-wide DNF rate before the next race), and, for logistic regression, its fill values,
+scaling and coefficients as numbers.
 
 Nothing here uses pickle, which can run any code hidden in a file when it's loaded; these
 files are only ever read as data.
@@ -26,7 +27,6 @@ from f1predict.models.dnf import DNF_KINDS, DNFModel, LightGBMDNF, LogisticDNF, 
 from f1predict.models.ranker import RankerModel
 
 FORMAT_VERSION = 1
-DNF_NAME = "dnf"
 LOGISTIC_PARAMS = ("fill", "mean", "scale", "coef")
 
 
@@ -109,15 +109,17 @@ def load_ranker(name: str, folder: Path | None = None) -> tuple[RankerModel, dic
 # ---------------------------------------------------------------------------
 
 
-def save_dnf_model(model: DNFModel, trained_on: dict[str, Any], folder: Path | None = None) -> Path:
+def save_dnf_model(
+    model: DNFModel, name: str, trained_on: dict[str, Any], folder: Path | None = None
+) -> Path:
     """Write a trained DNF model's description (and LightGBM's trees); return the JSON path.
 
-    A tree file left over from an earlier LightGBM choice is removed, so the folder never
-    holds a ``dnf.txt`` that doesn't belong to ``dnf.json``.
+    ``name`` is e.g. ``dnf_full``. A tree file left over from an earlier LightGBM choice is
+    removed, so the folder never holds a ``.txt`` that doesn't belong to the ``.json``.
     """
     if model.counts is None:
         raise RuntimeError("Only a trained model can be saved; call fit() first.")
-    text_path, meta_path = model_paths(DNF_NAME, folder)
+    text_path, meta_path = model_paths(name, folder)
     meta_path.parent.mkdir(parents=True, exist_ok=True)
     description: dict[str, Any] = {
         "format": FORMAT_VERSION,
@@ -142,12 +144,12 @@ def save_dnf_model(model: DNFModel, trained_on: dict[str, Any], folder: Path | N
     return meta_path
 
 
-def load_dnf_model(folder: Path | None = None) -> tuple[DNFModel, dict[str, Any]]:
-    """Load the saved DNF model and its description, checking that they belong together."""
-    text_path, meta_path = model_paths(DNF_NAME, folder)
+def load_dnf_model(name: str, folder: Path | None = None) -> tuple[DNFModel, dict[str, Any]]:
+    """Load a saved DNF model and its description, checking that they belong together."""
+    text_path, meta_path = model_paths(name, folder)
     if not meta_path.exists():
         raise FileNotFoundError(
-            f"No saved DNF model in {meta_path.parent}. Run `python -m f1predict train`."
+            f"No saved DNF model {name!r} in {meta_path.parent}. Run `python -m f1predict train`."
         )
     description = json.loads(meta_path.read_text(encoding="utf-8"))
     if description.get("format") != FORMAT_VERSION or description.get("kind") not in DNF_KINDS:
