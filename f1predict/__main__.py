@@ -10,10 +10,13 @@ import platform
 import time
 from contextlib import contextmanager
 from functools import partial
-from typing import TYPE_CHECKING, Annotated
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
+from rich import box
 from rich.console import Console
+from rich.markup import escape
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -329,44 +332,8 @@ def train(feature_set: FeatureSetOption = "full") -> None:
 
     The simulation temperature and the DNF model are chosen on 2024 first.
     """
-    from f1predict.models import run_name
-    from f1predict.models.dnf import dnf_inputs, make_dnf_model, starters
-    from f1predict.models.ranker import RankerModel, training_rows
-    from f1predict.models.store import save_dnf_model, save_ranker
-
     setup_logging(log_file=config.LOG_DIR / "train.log")
-    features = _load_features_or_exit()
-    history = features[features["status_class"].notna()]
-    rows = training_rows(history)
-    if rows.empty:
-        console.print("[bold red]No completed races to train on.[/bold red]")
-        raise typer.Exit(code=1)
-
-    temperature = _validation_temperature(features, feature_set)
-    _, kind, window = _choose_dnf(features, [config.VALIDATION_SEASON], feature_set)
-    started = time.perf_counter()
-    model = RankerModel(feature_set=feature_set).fit(history)
-    seconds = time.perf_counter() - started
-    dnf_model = make_dnf_model(kind, window, dnf_inputs(feature_set)).fit(history)
-    first, last = rows.iloc[0], rows.iloc[-1]
-    span = {
-        "first_race": f"{first['season']} round {first['round']}",
-        "last_race": f"{last['season']} round {last['round']}",
-    }
-    trained_on = {"races": int(rows["race_seq"].nunique()), "finishers": len(rows), **span}
-    started_rows = starters(history)
-    dnf_trained_on = {
-        "races": int(started_rows["race_seq"].nunique()),
-        "starters": len(started_rows),
-        "dnfs": int(started_rows["status_class"].eq("dnf").sum()),
-        **span,
-    }
-    path = save_ranker(model, run_name("ranker", feature_set), trained_on, temperature=temperature)
-    dnf_path = save_dnf_model(dnf_model, run_name("dnf", feature_set), dnf_trained_on)
-    _print_training(model, trained_on, seconds, temperature)
-    _print_dnf_training(dnf_model, dnf_trained_on)
-    console.print(f"Saved the ranker to {path} (description: {path.with_suffix('.json').name})")
-    console.print(f"Saved the DNF model to {dnf_path}")
+    _train_and_save(_load_features_or_exit(), feature_set)
 
 
 @app.command()
@@ -397,6 +364,160 @@ def report() -> None:
     console.print(table)
     for command in missing:
         console.print(f"[yellow]Left out:[/yellow] run `{command}` to include it.")
+
+
+@app.command("predict")
+def predict_command(
+    season: Annotated[
+        int,
+        typer.Option(
+            min=config.FIRST_SEASON, max=config.LAST_SEASON, help="Season of the race, e.g. 2026."
+        ),
+    ],
+    round_number: Annotated[
+        int, typer.Option("--round", min=1, help="Round number in that season's calendar.")
+    ],
+    sims: Annotated[
+        int,
+        typer.Option(min=config.MIN_SIMS, max=config.MAX_SIMS, help="How many races to simulate."),
+    ] = config.DEFAULT_SIMS,
+    seed: Annotated[
+        int, typer.Option(min=0, help="Random seed: the same seed gives the same chances.")
+    ] = config.DEFAULT_SEED,
+    grid_override: Annotated[
+        Path | None,
+        typer.Option(
+            "--grid-override",
+            exists=True,
+            dir_okay=False,
+            help="JSON file with the final grid after penalties and pit-lane starts.",
+        ),
+    ] = None,
+) -> None:
+    """Predict a race after qualifying: the order, plus win, podium, points and DNF chances.
+
+    A race not run yet uses the models saved by `train` or `update`. A race already run is
+    predicted by models trained only on the races before it (as in the backtest) and shown
+    next to its result. Prints a table and saves the prediction as JSON in
+    data/processed/predictions.
+    """
+    from f1predict.api import ModelsOutOfDateError, RaceUnavailableError, predict, save_prediction
+    from f1predict.models.store import ModelFileError
+    from f1predict.override import GridOverrideError, load_grid_override
+
+    setup_logging(log_file=config.LOG_DIR / "predict.log")
+    try:
+        override = None if grid_override is None else load_grid_override(grid_override)
+        result = predict(season, round_number, sims=sims, seed=seed, grid_override=override)
+    except (
+        RaceUnavailableError,
+        ModelsOutOfDateError,
+        GridOverrideError,
+        ModelFileError,
+        FileNotFoundError,
+    ) as exc:
+        console.print(f"[bold red]Can't predict:[/bold red] {escape(str(exc))}")
+        raise typer.Exit(code=1) from exc
+    path = save_prediction(result)
+    _print_prediction(result)
+    console.print(f"Saved the prediction to {path}")
+
+
+@app.command()
+def update(
+    practice: Annotated[
+        bool,
+        typer.Option("--practice/--no-practice", help="Also download practice laps from OpenF1."),
+    ] = True,
+) -> None:
+    """Bring the current season up to date: download it, rebuild the features, retrain.
+
+    Run it after qualifying to predict that race, and again after the race so the models
+    learn from it. Earlier seasons must have been downloaded once with `fetch`.
+    """
+    from f1predict.data.fetch import fetch_jolpica, fetch_practice
+    from f1predict.data.http import ApiError
+    from f1predict.data.lineage import UnknownConstructorError
+    from f1predict.data.mapping import DriverMappingError
+    from f1predict.data.openf1 import PracticeAlignmentError
+    from f1predict.data.tables import DataValidationError, load_table
+    from f1predict.features.build import (
+        build_features,
+        features_path,
+        load_features,
+        load_race_tables,
+        save_features,
+    )
+
+    setup_logging(log_file=config.LOG_DIR / "update.log")
+    season = config.LAST_SEASON
+    missing = _seasons_missing_before(season)
+    if missing:
+        console.print(
+            f"[bold red]Earlier seasons missing:[/bold red] {', '.join(map(str, missing))}. "
+            f"`update` only refreshes {season}; download every season once with "
+            "`python -m f1predict fetch` (it resumes and skips anything cached)."
+        )
+        raise typer.Exit(code=1)
+    before = load_features() if features_path().exists() else None
+    try:
+        _print_fetch_summary(fetch_jolpica(season, season))
+        if practice:
+            _print_practice_summary(fetch_practice(season, season))
+    except (ApiError, DataValidationError, PracticeAlignmentError, DriverMappingError) as exc:
+        console.print(f"[bold red]Update failed:[/bold red] {escape(str(exc))}")
+        console.print(
+            "Everything downloaded so far is cached. Run `update` again to resume, or "
+            "`update --no-practice` to skip OpenF1's practice laps this time."
+        )
+        raise typer.Exit(code=1) from exc
+    try:
+        features = build_features(load_race_tables())
+    except UnknownConstructorError as exc:
+        console.print(f"[bold red]Build failed:[/bold red] {escape(str(exc))}")
+        raise typer.Exit(code=1) from exc
+    path = save_features(features)
+    console.print(f"Saved {len(features)} feature rows to {path}")
+    schedule = load_table("schedule")
+    _print_changes(before, features, schedule)
+    _train_and_save(features, "full", details=False)
+    _print_next_step(features, schedule)
+
+
+# ---------------------------------------------------------------------------
+# Training (shared by `train` and `update`)
+# ---------------------------------------------------------------------------
+
+
+def _train_and_save(features: pd.DataFrame, feature_set: str, details: bool = True) -> None:
+    """Choose T and the DNF model on 2024, fit both models on every completed race, save them.
+
+    With ``details`` off (as in ``update``), the validation tables and what the models lean
+    on are left out; the progress bars and the summaries stay.
+    """
+    from f1predict.models import run_name
+    from f1predict.models.dnf import dnf_inputs, make_dnf_model
+    from f1predict.models.ranker import RankerModel, training_rows
+    from f1predict.models.store import save_dnf_model, save_ranker, training_summary
+
+    history = features[features["status_class"].notna()]
+    if training_rows(history).empty:
+        console.print("[bold red]No completed races to train on.[/bold red]")
+        raise typer.Exit(code=1)
+
+    temperature = _validation_temperature(features, feature_set)
+    _, kind, window = _choose_dnf(features, [config.VALIDATION_SEASON], feature_set, details)
+    started = time.perf_counter()
+    model = RankerModel(feature_set=feature_set).fit(history)
+    seconds = time.perf_counter() - started
+    dnf_model = make_dnf_model(kind, window, dnf_inputs(feature_set)).fit(history)
+    trained_on, dnf_trained_on = training_summary(history)
+    path = save_ranker(model, run_name("ranker", feature_set), trained_on, temperature=temperature)
+    dnf_path = save_dnf_model(dnf_model, run_name("dnf", feature_set), dnf_trained_on)
+    _print_training(model, trained_on, seconds, temperature, details)
+    _print_dnf_training(dnf_model, dnf_trained_on, details)
+    console.print(f"Saved the ranker to {path} (description: {path.with_suffix('.json').name})")
+    console.print(f"Saved the DNF model to {dnf_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -471,13 +592,13 @@ def _validation_temperature(features: pd.DataFrame, feature_set: str) -> float:
 
 
 def _choose_dnf(
-    features: pd.DataFrame, seasons: list[int], feature_set: str = "full"
+    features: pd.DataFrame, seasons: list[int], feature_set: str = "full", show: bool = True
 ) -> tuple[DNFComparison, str, int | None]:
     """Choose the DNF window and model on the validation season, comparing all three models.
 
     The learned models use only the DNF inputs allowed by ``feature_set``. They are
-    backtested over ``seasons`` plus the validation season (the choice is made there) and
-    the comparison is printed. Returns it with the chosen kind and window.
+    backtested over ``seasons`` plus the validation season (the choice is made there) and,
+    with ``show``, the comparison is printed. Returns it with the chosen kind and window.
     """
     from f1predict.evaluate.backtest import completed_races
     from f1predict.evaluate.dnf import compare_dnf_models
@@ -497,9 +618,10 @@ def _choose_dnf(
     with _race_progress(total, "DNF models") as progress:
         comparison = compare_dnf_models(features, compared, window, progress, inputs=inputs)
     kind = choose_dnf_kind(comparison.summary, season)
-    _print_dnf_window(windows, window, season)
-    _print_dnf_comparison(comparison, kind, window)
-    console.print(f"Inputs of the learned DNF models: {', '.join(inputs)}.")
+    if show:
+        _print_dnf_window(windows, window, season)
+        _print_dnf_comparison(comparison, kind, window)
+        console.print(f"Inputs of the learned DNF models: {', '.join(inputs)}.")
     return comparison, kind, window
 
 
@@ -691,8 +813,8 @@ def _print_dnf_comparison(comparison: DNFComparison, chosen: str, window: int | 
     )
 
 
-def _print_dnf_training(model: DNFModel, trained_on: dict) -> None:
-    """What the saved DNF model learned from, and what it leans on."""
+def _print_dnf_training(model: DNFModel, trained_on: dict, details: bool = True) -> None:
+    """What the saved DNF model learned from and, with ``details``, what it leans on."""
     from f1predict.models.dnf import KIND_LABELS, LightGBMDNF, LogisticDNF, window_label
 
     span = f"{trained_on['first_race']} to {trained_on['last_race']}"
@@ -707,6 +829,8 @@ def _print_dnf_training(model: DNFModel, trained_on: dict) -> None:
         "Starters", f"{trained_on['starters']} ({trained_on['dnfs']} DNFs, {share:.1%})"
     )
     console.print(summary)
+    if not details:
+        return
     if isinstance(model, LogisticDNF):
         view = Table(title="Coefficients (log-odds of a DNF per standard deviation)")
         view.add_column("Input")
@@ -729,9 +853,9 @@ def _settings_text(settings: dict) -> str:
 
 
 def _print_training(
-    model: RankerModel, trained_on: dict, seconds: float, temperature: float
+    model: RankerModel, trained_on: dict, seconds: float, temperature: float, details: bool = True
 ) -> None:
-    """What the final model learned from, and which features its trees leaned on."""
+    """What the final model learned from and, with ``details``, what its trees leaned on."""
     span = f"{trained_on['first_race']} to {trained_on['last_race']}"
     summary = Table(title="Trained ranker", show_header=False)
     summary.add_column("Setting", style="bold")
@@ -743,6 +867,8 @@ def _print_training(
     summary.add_row("Temperature", f"{temperature:.3f} (fitted on {config.VALIDATION_SEASON})")
     summary.add_row("Training time", f"{seconds:.1f} s")
     console.print(summary)
+    if not details:
+        return
 
     importance = model.importance()
     view = Table(title="What the trees lean on (share of total gain)")
@@ -754,6 +880,227 @@ def _print_training(
     if len(importance) > 10:
         view.add_row(f"{len(importance) - 10} others", f"{rest:.1%}")
     console.print(view)
+
+
+# ---------------------------------------------------------------------------
+# Prediction output
+# ---------------------------------------------------------------------------
+
+
+def _percent(chance: float) -> str:
+    """A chance as a percentage, showing the extremes as "<0.1%" and ">99.9%"."""
+    if 0 < chance < 0.001:
+        return "<0.1%"
+    if 0.999 < chance < 1:
+        return ">99.9%"
+    return f"{chance:.1%}"
+
+
+def _ordinal(number: int) -> str:
+    """1st, 2nd, 3rd, 4th, ..., 11th, 12th, 13th, ..., 21st, 22nd."""
+    teens = 10 <= number % 100 <= 20
+    suffix = "th" if teens else {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+    return f"{number}{suffix}"
+
+
+def _result_text(actual: dict[str, Any] | None) -> str:
+    """A finishing position, or DNF, DNS or DSQ."""
+    if not actual:
+        return "-"
+    if actual["status_class"] == "finished":
+        return actual["position_text"] or str(actual["position"])
+    return (actual["status_class"] or "?").upper()
+
+
+def _print_prediction(result: dict[str, Any]) -> None:
+    """The prediction as a table in predicted order, then how it was made."""
+    from f1predict.api import session_time
+    from f1predict.models.dnf import KIND_LABELS, window_label
+
+    race, model = result["race"], result["model"]
+    completed = race["status"] == "completed"
+    override = result["grid_override"] or {"grid": {}, "pitlane": []}
+    moved = {*override["grid"], *override["pitlane"]}
+    where = ", ".join(part for part in (race["circuit"], race["country"]) if part)
+    table = Table(
+        title=f"{race['season']} round {race['round']}: {race['name']}",
+        caption=f"{where}. Race start: {session_time(race['race_start'])}.",
+        box=box.SIMPLE_HEAD,
+        collapse_padding=True,
+        pad_edge=False,
+    )
+    columns = ["#", "Driver", "Team", "Grid", "Win", "Podium", "Points", "DNF"]
+    for column in [*columns, "Result"] if completed else columns:
+        if column in ("Driver", "Team"):
+            table.add_column(column)
+        else:
+            table.add_column(column, justify="right", no_wrap=True)
+    for driver in result["drivers"]:
+        grid = "PL" if driver["pitlane_start"] else str(driver["grid"] or "-")
+        name = f"{driver['code'] or ''} {driver['name'] or driver['driver_id']}".strip()
+        team = driver["team"] or driver["constructor_id"] or ""
+        cells = [
+            str(driver["predicted_rank"]),
+            Text(name, no_wrap=True, overflow="ellipsis"),
+            Text(team, no_wrap=True, overflow="ellipsis"),
+            grid + ("*" if driver["driver_id"] in moved else ""),
+            *(_percent(driver[key]) for key in ("p_win", "p_podium", "p_points", "p_dnf")),
+        ]
+        if completed:
+            cells.append(_result_text(driver["actual"]))
+        table.add_row(*cells)
+    console.print(table)
+    if any(driver["pitlane_start"] for driver in result["drivers"]):
+        console.print("PL: starts from the pit lane.")
+
+    trained = model["trained_on"]
+    span = f"{trained['races']} races, {trained['first_race']} to {trained['last_race']}"
+    if completed:
+        console.print(
+            "Already run: predicted by models trained only on the races before it "
+            f"({span}), as in the backtest."
+        )
+    else:
+        console.print(f"Not run yet: predicted by the saved models ({span}).")
+    console.print(
+        f"{model['sims']:,} simulated races (seed {model['seed']}), temperature "
+        f"T = {model['temperature']:.3f}. Retirements come from the "
+        f"{KIND_LABELS[model['dnf_model']].lower()} DNF model (field-wide rate over the "
+        f"{window_label(model['dnf_window'])})."
+    )
+    if moved:
+        console.print("* Starting slot set by the grid override.")
+        if completed:
+            console.print("  This race has already been run, so the override makes it a what-if.")
+    if race["season"] <= model["settings_chosen_on"]:
+        console.print(
+            f"[yellow]Note:[/yellow] the model's settings were chosen on "
+            f"{model['settings_chosen_on']}, so predictions for {model['settings_chosen_on']} "
+            "and earlier aren't fully out of sample."
+        )
+    if completed:
+        _print_winner(result["drivers"])
+
+
+def _print_winner(drivers: list[dict[str, Any]]) -> None:
+    """For a race already run: who won, and how the prediction rated them."""
+    winner = next((d for d in drivers if d["actual"] and d["actual"]["position_text"] == "1"), None)
+    if winner is None:
+        return
+    by_chance = sorted(drivers, key=lambda d: -d["p_win"])
+    place = by_chance.index(winner) + 1
+    favourite = by_chance[0]
+    if place == 1:
+        console.print(
+            f"Winner: {escape(winner['name'] or winner['driver_id'])}, the favourite "
+            f"({_percent(winner['p_win'])} to win)."
+        )
+    else:
+        console.print(
+            f"Winner: {escape(winner['name'] or winner['driver_id'])}, given "
+            f"{_percent(winner['p_win'])} to win ({_ordinal(place)} favourite; the favourite "
+            f"was {escape(favourite['name'] or favourite['driver_id'])} at "
+            f"{_percent(favourite['p_win'])})."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Update output
+# ---------------------------------------------------------------------------
+
+
+def _seasons_missing_before(season: int) -> list[int]:
+    """Seasons from the first one up to ``season - 1`` with no saved calendar."""
+    from f1predict.data.tables import load_table
+
+    try:
+        have = set(load_table("schedule")["season"])
+    except FileNotFoundError:
+        have = set()
+    return [year for year in range(config.FIRST_SEASON, season) if year not in have]
+
+
+def _race_snapshots(features: pd.DataFrame | None) -> dict[tuple[int, int], tuple]:
+    """Per race: whether it has a result, and its entries, grid and outcome as text."""
+    if features is None:
+        return {}
+    columns = ["driver_id", "grid", "position", "status_class"]
+    snapshots = {}
+    for (season, round_number), race in features.groupby(["season", "round"]):
+        rows = sorted(tuple(map(str, row)) for row in race[columns].itertuples(index=False))
+        completed = bool(race["status_class"].notna().all())
+        snapshots[(int(season), int(round_number))] = (completed, tuple(rows))
+    return snapshots
+
+
+def _print_changes(
+    before: pd.DataFrame | None, after: pd.DataFrame, schedule: pd.DataFrame
+) -> None:
+    """The races that are new or changed since the features were last built."""
+    from f1predict.models.store import race_label
+
+    if before is None:
+        races = after.groupby(["season", "round"]).ngroups
+        console.print(f"Built the features for the first time: {races} races.")
+        return
+    old, new = _race_snapshots(before), _race_snapshots(after)
+    names = dict(
+        zip(
+            zip(schedule["season"].astype(int), schedule["round"].astype(int), strict=True),
+            schedule["race_name"].astype(str),
+            strict=True,
+        )
+    )
+    table = Table(title="New since the last update")
+    for column in ("Race", "Name", "What"):
+        table.add_column(column)
+    for key, (completed, _) in sorted(new.items()):
+        if old.get(key) == new[key]:
+            continue
+        if completed and not old.get(key, (False,))[0]:
+            what = "result"
+        elif completed:
+            what = "result changed (e.g. a late penalty)"
+        elif key not in old:
+            what = "qualifying: ready to predict"
+        else:
+            what = "qualifying changed"
+        table.add_row(race_label(*key), escape(names.get(key, "")), what)
+    if table.row_count:
+        console.print(table)
+    else:
+        console.print("No new races or changes since the last update.")
+
+
+def _print_next_step(features: pd.DataFrame, schedule: pd.DataFrame) -> None:
+    """What to run next: the prediction for a qualified race, or when the next qualifying is."""
+    import pandas as pd
+
+    from f1predict.api import session_time
+    from f1predict.models.store import race_label
+
+    upcoming = features[features["status_class"].isna()]
+    if not upcoming.empty:
+        season, round_number = (int(value) for value in upcoming[["season", "round"]].iloc[0])
+        console.print(
+            "Ready to predict: "
+            f"python -m f1predict predict --season {season} --round {round_number}"
+        )
+        return
+    last = max(zip(features["season"].astype(int), features["round"].astype(int), strict=True))
+    keys = list(zip(schedule["season"].astype(int), schedule["round"].astype(int), strict=True))
+    later = schedule[[key > last and key not in config.EXCLUDED_RACES for key in keys]]
+    if later.empty:
+        console.print(f"No races left on the {last[0]} calendar.")
+        return
+    following = later.sort_values(["season", "round"]).iloc[0]
+    label = race_label(int(following["season"]), int(following["round"]))
+    start = following["quali_start"]
+    when = session_time(start) if pd.notna(start) else "at a time not announced yet"
+    console.print(
+        f"Next: {label}, {escape(str(following['race_name']))}. Qualifying starts {when}; "
+        "run `python -m f1predict update` after it, then `predict`."
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -60,10 +60,14 @@ OUTCOMES = {"win": 1, "podium": 3, "points": 10}
 
 # ---------------------------------------------------------------------------
 # Simulation defaults
+# A prediction simulates between 100,000 races (chances good to about ±0.3 percentage
+# points) and 1,000,000 (about a second of work).
 # ---------------------------------------------------------------------------
 
 DEFAULT_SEED = 42
 DEFAULT_SIMS = 100_000
+MIN_SIMS = 100_000
+MAX_SIMS = 1_000_000
 
 # ---------------------------------------------------------------------------
 # Jolpica API

@@ -9,6 +9,9 @@ when it's LightGBM): its kind, the starts and retirements per race it learned fr
 field-wide DNF rate before the next race), and, for logistic regression, its fill values,
 scaling and coefficients as numbers.
 
+Both descriptions record what the model learned from (``trained_on``: races, rows, first and
+last race), which is how ``predict`` tells whether saved models are up to date.
+
 Nothing here uses pickle, which can run any code hidden in a file when it's loaded; these
 files are only ever read as data.
 """
@@ -23,8 +26,15 @@ import lightgbm as lgb
 import pandas as pd
 
 from f1predict import __version__, config
-from f1predict.models.dnf import DNF_KINDS, DNFModel, LightGBMDNF, LogisticDNF, make_dnf_model
-from f1predict.models.ranker import RankerModel
+from f1predict.models.dnf import (
+    DNF_KINDS,
+    DNFModel,
+    LightGBMDNF,
+    LogisticDNF,
+    make_dnf_model,
+    starters,
+)
+from f1predict.models.ranker import RankerModel, training_rows
 
 FORMAT_VERSION = 1
 LOGISTIC_PARAMS = ("fill", "mean", "scale", "coef")
@@ -32,6 +42,40 @@ LOGISTIC_PARAMS = ("fill", "mean", "scale", "coef")
 
 class ModelFileError(ValueError):
     """A saved model and its description don't match, or weren't made by this project."""
+
+
+# ---------------------------------------------------------------------------
+# What a model learned from
+# ---------------------------------------------------------------------------
+
+
+def race_label(season: int, round_number: int) -> str:
+    """A race as named in saved descriptions and messages, e.g. ``2026 round 17``."""
+    return f"{season} round {round_number}"
+
+
+def training_summary(history: pd.DataFrame) -> tuple[dict[str, Any], dict[str, Any]]:
+    """What the ranker and the DNF model learn from in ``history``, as saved with them.
+
+    The ranker learns from finishers and the DNF model from starters, so each gets its own
+    counts; both name the first and last race. ``history`` must hold at least one race.
+    """
+    races = history.drop_duplicates("race_seq").sort_values("race_seq")
+    first, last = races.iloc[0], races.iloc[-1]
+    span = {
+        "first_race": race_label(int(first["season"]), int(first["round"])),
+        "last_race": race_label(int(last["season"]), int(last["round"])),
+    }
+    finishers = training_rows(history)
+    started = starters(history)
+    ranker = {"races": int(finishers["race_seq"].nunique()), "finishers": len(finishers), **span}
+    dnf = {
+        "races": int(started["race_seq"].nunique()),
+        "starters": len(started),
+        "dnfs": int(started["status_class"].eq("dnf").sum()),
+        **span,
+    }
+    return ranker, dnf
 
 
 # ---------------------------------------------------------------------------

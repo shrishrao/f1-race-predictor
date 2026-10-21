@@ -5,9 +5,9 @@
 Predicts a Formula 1 race right after qualifying: the full finishing order, plus each driver's
 chance to **win**, finish on the **podium**, score **points** (top 10), and **retire** (DNF).
 
-> **Status: in development.** The data pipeline, features, ranker, race simulation, DNF model
-> and backtests are done (results below). The `predict` command, the package API and a live
-> Streamlit demo come next.
+> **Status: in development.** The data pipeline, features, ranker, race simulation, DNF model,
+> backtests (results below), the `predict` and `update` commands and the package API are done.
+> A live Streamlit demo comes next.
 
 ## How it works
 
@@ -142,6 +142,42 @@ python -m f1predict backtest --model ranker --features no_grid_quali
 python -m f1predict backtest --model ranker --no-dnf
 python -m f1predict train
 python -m f1predict report
+```
+
+### Predicting a race
+
+Once `fetch` has downloaded every season, each race weekend needs two commands after
+qualifying:
+
+```powershell
+python -m f1predict update
+python -m f1predict predict --season 2026 --round 18
+```
+
+`update` downloads the current season, rebuilds the features, retrains, and lists what's new.
+`predict` prints the predicted order with each driver's chances and saves the same numbers as
+JSON in `data/processed/predictions/`. A race that has already been run is predicted by models
+trained only on the races before it, exactly as in the backtest, and shown next to its result.
+
+Grid penalties and pit-lane starts announced after qualifying go in a small JSON file. Drivers
+are named by their Jolpica id (as in the JSON output); everyone not named keeps their order:
+
+```json
+{"season": 2026, "round": 18, "grid": {"hamilton": 15}, "pitlane": ["stroll"]}
+```
+
+```powershell
+python -m f1predict predict --season 2026 --round 18 --grid-override penalties.json
+```
+
+From Python, `predict` returns the same dict that the command saves:
+
+```python
+from f1predict import predict
+
+result = predict(2026, 18)
+for driver in result["drivers"][:3]:
+    print(driver["name"], driver["p_win"])
 ```
 
 ## Project layout
